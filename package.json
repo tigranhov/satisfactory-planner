@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
+    "sync-data": "bun scripts/sync-gamedata.ts",
     "dist": "npm run build && electron-builder"
   },
   "dependencies": {
