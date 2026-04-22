@@ -13,3 +13,4 @@ build/
 bun.lockb
 bun.lock
 tmp/
+*.tsbuildinfo
