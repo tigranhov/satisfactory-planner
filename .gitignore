@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-electron/
+dist-web/
+release/
 build/
 .env
 .env.local
@@ -7,3 +10,6 @@ build/
 *.log
 .vscode/
 .idea/
+bun.lockb
+bun.lock
+tmp/

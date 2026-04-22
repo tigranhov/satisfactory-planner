@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #161a22;
+  color: #e6e8ee;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  overflow: hidden;
+}
+
+/* React Flow theme overrides */
+.react-flow__renderer {
+  background: #161a22;
+}
+.react-flow__edge-path {
+  stroke: #fa9549;
+  stroke-width: 2;
+}
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fa9549;
+  background: #1e2330;
+}
+.react-flow__controls button {
+  background: #1e2330;
+  color: #e6e8ee;
+  border-bottom: 1px solid #2d3445;
+}
+.react-flow__minimap {
+  background: #1e2330;
+}

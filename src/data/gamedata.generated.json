@@ -1,0 +1,121 @@
+{
+  "items": {
+    "iron-ingot": {
+      "category": "parts",
+      "form": "solid",
+      "icon": "II",
+      "id": "iron-ingot",
+      "name": "Iron Ingot"
+    },
+    "iron-ore": {
+      "category": "ores",
+      "form": "solid",
+      "icon": "IO",
+      "id": "iron-ore",
+      "name": "Iron Ore"
+    },
+    "iron-plate": {
+      "category": "parts",
+      "form": "solid",
+      "icon": "IP",
+      "id": "iron-plate",
+      "name": "Iron Plate"
+    },
+    "iron-rod": {
+      "category": "parts",
+      "form": "solid",
+      "icon": "IR",
+      "id": "iron-rod",
+      "name": "Iron Rod"
+    },
+    "screw": {
+      "category": "parts",
+      "form": "solid",
+      "icon": "SC",
+      "id": "screw",
+      "name": "Screw"
+    }
+  },
+  "machines": {
+    "constructor": {
+      "category": "manufacturer",
+      "icon": "CN",
+      "id": "constructor",
+      "name": "Constructor",
+      "powerMW": 4,
+      "powerShardSlots": 3,
+      "somersloopSlots": 1
+    },
+    "smelter": {
+      "category": "manufacturer",
+      "icon": "SM",
+      "id": "smelter",
+      "name": "Smelter",
+      "powerMW": 4,
+      "powerShardSlots": 3,
+      "somersloopSlots": 1
+    }
+  },
+  "meta": {
+    "gameVersion": "placeholder",
+    "source": "sample"
+  },
+  "recipes": {
+    "r-iron-ingot": {
+      "alternate": false,
+      "durationSec": 2,
+      "id": "r-iron-ingot",
+      "ingredients": [{ "amount": 1, "itemId": "iron-ore" }],
+      "machineId": "smelter",
+      "name": "Iron Ingot",
+      "powerMW": 4,
+      "producedIn": ["smelter"],
+      "products": [{ "amount": 1, "itemId": "iron-ingot" }]
+    },
+    "r-iron-plate": {
+      "alternate": false,
+      "durationSec": 6,
+      "id": "r-iron-plate",
+      "ingredients": [{ "amount": 3, "itemId": "iron-ingot" }],
+      "machineId": "constructor",
+      "name": "Iron Plate",
+      "powerMW": 4,
+      "producedIn": ["constructor"],
+      "products": [{ "amount": 2, "itemId": "iron-plate" }]
+    },
+    "r-iron-rod": {
+      "alternate": false,
+      "durationSec": 4,
+      "id": "r-iron-rod",
+      "ingredients": [{ "amount": 1, "itemId": "iron-ingot" }],
+      "machineId": "constructor",
+      "name": "Iron Rod",
+      "powerMW": 4,
+      "producedIn": ["constructor"],
+      "products": [{ "amount": 1, "itemId": "iron-rod" }]
+    },
+    "r-screw": {
+      "alternate": false,
+      "durationSec": 6,
+      "id": "r-screw",
+      "ingredients": [{ "amount": 1, "itemId": "iron-rod" }],
+      "machineId": "constructor",
+      "name": "Screw",
+      "powerMW": 4,
+      "producedIn": ["constructor"],
+      "products": [{ "amount": 4, "itemId": "screw" }]
+    }
+  },
+  "resourceDefaults": {
+    "extractorCycleSec": {
+      "miner-mk1": 1.0,
+      "miner-mk2": 0.5,
+      "miner-mk3": 0.25
+    },
+    "purities": {
+      "impure": 0.5,
+      "normal": 1.0,
+      "pure": 2.0
+    }
+  }
+}
