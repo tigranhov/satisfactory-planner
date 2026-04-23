@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Package, Plus, Search, Trash2, X } from 'lucide-react';
+import { Copy, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
+import { openBlueprintForEditing } from '@/hooks/useBlueprintEditorBridge';
 import type { Blueprint } from '@/models/blueprint';
 
 const gameData = loadGameData();
@@ -127,7 +128,7 @@ export default function BlueprintBook({ open, onClose }: Props) {
           {loaded && list.length > 0 && (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
               {list.map((bp) => (
-                <BlueprintCard key={bp.id} blueprint={bp} />
+                <BlueprintCard key={bp.id} blueprint={bp} onClose={onClose} />
               ))}
             </div>
           )}
@@ -139,9 +140,10 @@ export default function BlueprintBook({ open, onClose }: Props) {
 
 interface CardProps {
   blueprint: Blueprint;
+  onClose: () => void;
 }
 
-function BlueprintCard({ blueprint }: CardProps) {
+function BlueprintCard({ blueprint, onClose }: CardProps) {
   const updateBlueprint = useBlueprintStore((s) => s.updateBlueprint);
   const removeBlueprint = useBlueprintStore((s) => s.removeBlueprint);
   const addBlueprint = useBlueprintStore((s) => s.addBlueprint);
@@ -244,6 +246,16 @@ function BlueprintCard({ blueprint }: CardProps) {
           </div>
         </div>
         <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => {
+              openBlueprintForEditing(blueprint.id);
+              onClose();
+            }}
+            className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
+            title="Edit internals"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={duplicate}
             className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
-import { loadGameData, getRecipesProducing } from '@/data/loader';
+import { ArrowLeft, ArrowLeftFromLine, ArrowRightFromLine, Package, Search } from 'lucide-react';
+import { loadGameData, getAllItemsSorted, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
@@ -18,11 +18,21 @@ const producibleItems: Item[] = (() => {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 })();
 
+const allItems: Item[] = getAllItemsSorted(gameData);
+
+type Mode = 'recipe' | 'input' | 'output';
+
 interface Props {
   screenPosition: { x: number; y: number };
   flowPosition: { x: number; y: number };
   onClose: () => void;
   onSelectRecipe: (recipeId: string, flowPosition: { x: number; y: number }) => void;
+  allowInterface?: boolean;
+  onSelectInterface?: (
+    kind: 'input' | 'output',
+    itemId: string,
+    flowPosition: { x: number; y: number },
+  ) => void;
 }
 
 export default function CanvasContextMenu({
@@ -30,7 +40,10 @@ export default function CanvasContextMenu({
   flowPosition,
   onClose,
   onSelectRecipe,
+  allowInterface = false,
+  onSelectInterface,
 }: Props) {
+  const [mode, setMode] = useState<Mode>('recipe');
   const [query, setQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -38,25 +51,26 @@ export default function CanvasContextMenu({
   const listRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => inputRef.current?.focus(), [selectedItem]);
+  useEffect(() => inputRef.current?.focus(), [selectedItem, mode]);
 
   usePopoverDismiss(rootRef, onClose);
 
+  const itemsForMode = mode === 'recipe' ? producibleItems : allItems;
+
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return producibleItems;
-    return producibleItems.filter((i) => i.name.toLowerCase().includes(q));
-  }, [query]);
+    if (!q) return itemsForMode;
+    return itemsForMode.filter((i) => i.name.toLowerCase().includes(q));
+  }, [query, itemsForMode]);
 
   const recipesForItem = useMemo(() => {
-    if (!selectedItem) return [] as Recipe[];
+    if (!selectedItem || mode !== 'recipe') return [] as Recipe[];
     const all = getRecipesProducing(gameData, selectedItem.id).filter((r) => !r.manualOnly);
-    // Keep standard recipes first, alternates after.
     return [...all].sort((a, b) => {
       if (a.alternate !== b.alternate) return a.alternate ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
-  }, [selectedItem]);
+  }, [selectedItem, mode]);
 
   const filteredRecipes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -64,11 +78,10 @@ export default function CanvasContextMenu({
     return recipesForItem.filter((r) => r.name.toLowerCase().includes(q));
   }, [query, recipesForItem]);
 
-  const rows = selectedItem ? filteredRecipes : filteredItems;
+  const showingRecipes = mode === 'recipe' && !!selectedItem;
+  const rows = showingRecipes ? filteredRecipes : filteredItems;
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query, selectedItem]);
+  useEffect(() => setActiveIndex(0), [query, selectedItem, mode]);
 
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`);
@@ -76,13 +89,17 @@ export default function CanvasContextMenu({
   }, [activeIndex]);
 
   const pickItem = (item: Item) => {
-    const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
-    if (recipes.length === 1) {
-      onSelectRecipe(recipes[0].id, flowPosition);
+    if (mode === 'recipe') {
+      const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
+      if (recipes.length === 1) {
+        onSelectRecipe(recipes[0].id, flowPosition);
+        return;
+      }
+      setSelectedItem(item);
+      setQuery('');
       return;
     }
-    setSelectedItem(item);
-    setQuery('');
+    onSelectInterface?.(mode, item.id, flowPosition);
   };
 
   const pickRecipe = (recipe: Recipe) => {
@@ -114,7 +131,7 @@ export default function CanvasContextMenu({
       e.preventDefault();
       const row = rows[activeIndex];
       if (!row) return;
-      if (selectedItem) pickRecipe(row as Recipe);
+      if (showingRecipes) pickRecipe(row as Recipe);
       else pickItem(row as Item);
       return;
     }
@@ -125,8 +142,16 @@ export default function CanvasContextMenu({
   };
 
   const MENU_W = 340;
-  const MENU_H = 400;
+  const MENU_H = 440;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
+
+  const searchPlaceholder = showingRecipes
+    ? 'Filter recipes...'
+    : mode === 'recipe'
+    ? 'Search items...'
+    : mode === 'input'
+    ? 'Search items for Input...'
+    : 'Search items for Output...';
 
   return (
     <div
@@ -135,8 +160,22 @@ export default function CanvasContextMenu({
       style={{ left, top, width: MENU_W, height: MENU_H }}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {allowInterface && !showingRecipes && (
+        <div className="flex gap-1 border-b border-border bg-panel-hi p-1.5">
+          <ModeButton current={mode} value="recipe" onSelect={setMode} icon={<Package className="h-3 w-3" />}>
+            Recipe
+          </ModeButton>
+          <ModeButton current={mode} value="input" onSelect={setMode} icon={<ArrowRightFromLine className="h-3 w-3" />}>
+            Input
+          </ModeButton>
+          <ModeButton current={mode} value="output" onSelect={setMode} icon={<ArrowLeftFromLine className="h-3 w-3" />}>
+            Output
+          </ModeButton>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 border-b border-border bg-panel-hi px-2 py-1.5">
-        {selectedItem ? (
+        {showingRecipes && selectedItem ? (
           <>
             <button
               onClick={() => {
@@ -155,7 +194,9 @@ export default function CanvasContextMenu({
             </span>
           </>
         ) : (
-          <span className="text-xs uppercase tracking-wider text-[#6b7388]">Add recipe</span>
+          <span className="text-xs uppercase tracking-wider text-[#6b7388]">
+            {mode === 'recipe' ? 'Add recipe' : mode === 'input' ? 'Add input' : 'Add output'}
+          </span>
         )}
       </div>
 
@@ -167,7 +208,7 @@ export default function CanvasContextMenu({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={selectedItem ? 'Filter recipes...' : 'Search items...'}
+          placeholder={searchPlaceholder}
           className="w-full rounded border border-border bg-panel-hi py-1.5 pl-8 pr-2 text-sm text-[#e6e8ee] outline-none focus:border-accent"
         />
       </div>
@@ -176,7 +217,7 @@ export default function CanvasContextMenu({
         {rows.length === 0 && (
           <div className="p-3 text-center text-xs text-[#6b7388]">No matches</div>
         )}
-        {!selectedItem &&
+        {!showingRecipes &&
           (rows as Item[]).map((item, i) => (
             <button
               key={item.id}
@@ -191,10 +232,12 @@ export default function CanvasContextMenu({
               <span className="truncate">{item.name}</span>
             </button>
           ))}
-        {selectedItem &&
+        {showingRecipes &&
           (rows as Recipe[]).map((recipe, i) => {
             const machine = gameData.machines[recipe.machineId];
-            const product = recipe.products.find((p) => p.itemId === selectedItem.id);
+            const product = selectedItem
+              ? recipe.products.find((p) => p.itemId === selectedItem.id)
+              : undefined;
             const isByproduct = product?.isByproduct ?? false;
             const rate = product ? (product.amount * 60) / recipe.durationSec : 0;
             return (
@@ -238,5 +281,30 @@ export default function CanvasContextMenu({
           })}
       </div>
     </div>
+  );
+}
+
+interface ModeButtonProps {
+  current: Mode;
+  value: Mode;
+  onSelect: (m: Mode) => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}
+
+function ModeButton({ current, value, onSelect, icon, children }: ModeButtonProps) {
+  const active = current === value;
+  return (
+    <button
+      onClick={() => onSelect(value)}
+      className={`flex flex-1 items-center justify-center gap-1 rounded py-1 text-[11px] transition-colors ${
+        active
+          ? 'bg-accent text-[#1b1410]'
+          : 'text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]'
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
   );
 }

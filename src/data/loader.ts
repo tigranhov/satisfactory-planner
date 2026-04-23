@@ -26,6 +26,7 @@ let recipesConsuming: Map<string, Recipe[]> = new Map();
 let recipesByMachine: Map<string, Recipe[]> = new Map();
 let itemsByCategory: Record<string, Item[]> = {};
 let sortedRecipeList: Recipe[] = [];
+let sortedItemList: Item[] = [];
 let itemNameLower: Map<string, string> = new Map();
 let recipeNameLower: Map<string, string> = new Map();
 
@@ -65,6 +66,7 @@ function rebuildIndices(d: GameData) {
   for (const cat of Object.keys(itemsByCategory)) {
     itemsByCategory[cat].sort((a, b) => a.name.localeCompare(b.name));
   }
+  sortedItemList = Object.values(d.items).sort((a, b) => a.name.localeCompare(b.name));
 
   sortedRecipeList = Object.values(d.recipes)
     .filter((r) => !r.manualOnly)
@@ -97,6 +99,11 @@ export function getRecipesByMachine(d: GameData, machineId: string): Recipe[] {
 export function getItemsByCategory(d: GameData): Record<string, Item[]> {
   rebuildIndices(d);
   return itemsByCategory;
+}
+
+export function getAllItemsSorted(d: GameData): Item[] {
+  rebuildIndices(d);
+  return sortedItemList;
 }
 
 export function searchRecipes(d: GameData, query: string): Recipe[] {

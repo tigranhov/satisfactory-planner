@@ -20,11 +20,13 @@ import { useNavigationStore } from '@/store/navigationStore';
 import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
 import CompositeNode from './nodes/CompositeNode';
+import InterfaceNode from './nodes/InterfaceNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import { computeFlows, type HandleFlow } from '@/models/flow';
 import { itemsPerMinute, nodePowerMW, somersloopMultiplier } from '@/models/factory';
+import { useBlueprintStore } from '@/store/blueprintStore';
 import type { Graph, GraphEdge, NodeData, RecipeNodeData } from '@/models/graph';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
@@ -45,7 +47,12 @@ function isEditableTarget(el: EventTarget | null): boolean {
 
 const gameData = loadGameData();
 
-const nodeTypes = { recipe: RecipeNode, composite: CompositeNode };
+const nodeTypes = {
+  recipe: RecipeNode,
+  composite: CompositeNode,
+  input: InterfaceNode,
+  output: InterfaceNode,
+};
 const edgeTypes = { rate: RateEdge };
 
 function graphToFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
@@ -223,6 +230,19 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setMenu(null);
     },
     [activeGraphId, store],
+  );
+
+  const onPickInterface = useCallback(
+    (kind: 'input' | 'output', itemId: string, position: { x: number; y: number }) => {
+      if (!gameData.items[itemId]) return;
+      store.getState().addNode(activeGraphId, position, { kind, itemId });
+      setMenu(null);
+    },
+    [activeGraphId, store],
+  );
+
+  const isEditingBlueprint = useBlueprintStore(
+    (s) => activeGraphId in s.blueprints,
   );
 
   const onPointerMove = useCallback(
@@ -460,6 +480,8 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           flowPosition={menu.flow}
           onClose={() => setMenu(null)}
           onSelectRecipe={onPickRecipe}
+          allowInterface={isEditingBlueprint}
+          onSelectInterface={onPickInterface}
         />
       )}
       {nodeMenu && (

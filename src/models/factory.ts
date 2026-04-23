@@ -49,6 +49,10 @@ export function handleIdForProduct(recipeId: string, itemId: string, index: numb
   return `out:${recipeId}:${itemId}:${index}`;
 }
 
+export function handleIdForInterface(kind: 'input' | 'output', itemId: string) {
+  return `${kind === 'input' ? 'bpin' : 'bpout'}:${itemId}`;
+}
+
 export function handleIndexFromId(handleId: string): number | null {
   const parts = handleId.split(':');
   if (parts.length < 4) return null;
