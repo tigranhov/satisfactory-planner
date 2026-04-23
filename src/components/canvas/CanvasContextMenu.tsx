@@ -387,7 +387,10 @@ export default function CanvasContextMenu({
         />
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto p-1">
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {rowCount === 0 && (
           <div className="p-3 text-center text-xs text-[#6b7388]">No matches</div>
         )}

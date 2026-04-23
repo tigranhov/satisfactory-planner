@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import { Copy, Minus, Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Package, Pencil, Trash2 } from 'lucide-react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
+import CountEditor from './editors/CountEditor';
 import OverclockEditor from './editors/OverclockEditor';
 import SomersloopEditor from './editors/SomersloopEditor';
 
@@ -11,9 +12,11 @@ export interface RecipeControls {
   somersloops: number;
   somersloopSlots: number;
   powerMW: number;
+  count: number;
   primaryOutput?: { baseRate: number; itemName: string; itemIcon?: string };
   onOverclock: (clockSpeed: number) => void;
   onSomersloop: (somersloops: number) => void;
+  onCount: (count: number) => void;
 }
 
 export interface BlueprintControls {
@@ -49,7 +52,7 @@ export default function NodeContextMenu({
 
   const MENU_W = 300;
   // Conservative upper bound for clamp positioning; real height is content-driven.
-  const MENU_H = recipe ? 320 : blueprint ? 120 : 48;
+  const MENU_H = recipe ? 360 : blueprint ? 120 : 48;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
   return (
@@ -113,6 +116,8 @@ export default function NodeContextMenu({
 
       {recipe && (
         <>
+          <CountEditor count={recipe.count} onChange={recipe.onCount} />
+          <div className="border-t border-border" />
           <OverclockEditor
             clockSpeed={recipe.clockSpeed}
             powerShardSlots={recipe.powerShardSlots}
@@ -130,38 +135,7 @@ export default function NodeContextMenu({
         </>
       )}
 
-      {blueprint && (
-        <div className="flex items-center gap-2 px-3 py-2">
-          <span className="text-xs uppercase tracking-wider text-[#6b7388]">Count</span>
-          <div className="ml-auto flex items-center gap-1">
-            <button
-              onClick={() => blueprint.onCount(Math.max(1, blueprint.count - 1))}
-              disabled={blueprint.count <= 1}
-              className="rounded border border-border p-1 text-[#9aa2b8] hover:bg-panel-hi hover:text-[#e6e8ee] disabled:opacity-40"
-              title="Decrease"
-            >
-              <Minus className="h-3 w-3" />
-            </button>
-            <input
-              type="number"
-              min={1}
-              value={blueprint.count}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n) && n >= 1) blueprint.onCount(Math.floor(n));
-              }}
-              className="w-14 rounded border border-border bg-panel-hi px-2 py-0.5 text-center text-sm outline-none focus:border-accent"
-            />
-            <button
-              onClick={() => blueprint.onCount(blueprint.count + 1)}
-              className="rounded border border-border p-1 text-[#9aa2b8] hover:bg-panel-hi hover:text-[#e6e8ee]"
-              title="Increase"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
-      )}
+      {blueprint && <CountEditor count={blueprint.count} onChange={blueprint.onCount} />}
     </div>
   );
 }

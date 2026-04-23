@@ -585,11 +585,14 @@ export default function GraphCanvas({ onSelectNode }: Props) {
                   somersloops: nodeMenuRecipe.data.somersloops,
                   somersloopSlots: nodeMenuRecipe.somersloopSlots,
                   powerMW: nodeMenuRecipe.powerMW,
+                  count: nodeMenuRecipe.data.count,
                   primaryOutput: nodeMenuRecipe.primary ?? undefined,
                   onOverclock: (clockSpeed) =>
                     updateRecipeNodeData(nodeMenuRecipe.nodeId, { clockSpeed }),
                   onSomersloop: (somersloops) =>
                     updateRecipeNodeData(nodeMenuRecipe.nodeId, { somersloops }),
+                  onCount: (count) =>
+                    updateRecipeNodeData(nodeMenuRecipe.nodeId, { count }),
                 }
               : undefined
           }
