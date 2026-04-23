@@ -85,11 +85,22 @@ export default function Inspector({ selectedNodeId }: Props) {
     );
   }
 
-  if (node.data.kind === 'composite') {
+  if (node.data.kind === 'factory') {
+    const facData = node.data;
+    const renameFactory = (label: string) => {
+      updateNode(activeGraph.id, node.id, { data: { ...facData, label } });
+      useGraphStore.getState().renameGraph(facData.factoryGraphId, label);
+    };
     return (
       <div className="flex h-full flex-col border-l border-border bg-panel p-4 text-sm">
-        <div className="mb-2 text-xs uppercase tracking-wider text-[#6b7388]">Composite Node</div>
-        <div className="text-lg font-medium">{node.data.label}</div>
+        <div className="mb-2 text-xs uppercase tracking-wider text-[#6b7388]">Factory Node</div>
+        <label className="mb-2 text-xs">Name</label>
+        <input
+          type="text"
+          value={facData.label}
+          onChange={(e) => renameFactory(e.target.value)}
+          className="mb-3 rounded border border-border bg-panel-hi px-2 py-1 text-lg font-medium outline-none focus:border-accent"
+        />
         <div className="mt-2 text-xs text-[#6b7388]">
           Double-click the node on the canvas to open its subgraph.
         </div>

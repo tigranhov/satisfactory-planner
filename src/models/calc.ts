@@ -8,7 +8,7 @@ export function propagateRates(_data: GameData, graph: Graph): Graph {
   return graph;
 }
 
-// Aggregates a subgraph's net I/O so its parent composite node
+// Aggregates a factory subgraph's net I/O so the parent factory node
 // can expose matching handles and show rollup numbers.
 // Stub: returns empty aggregation.
 export function aggregateSubgraph(_data: GameData, _graph: Graph) {

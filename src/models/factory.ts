@@ -48,14 +48,14 @@ const HANDLE_PREFIX = {
   recipeOut: 'out',
   ifaceIn: 'bpin',
   ifaceOut: 'bpout',
-  bpInstIn: 'bpi-in',
-  bpInstOut: 'bpi-out',
+  subgraphIn: 'bpi-in',
+  subgraphOut: 'bpi-out',
 } as const;
 
 const SOURCE_HANDLE_PREFIXES: readonly string[] = [
   HANDLE_PREFIX.recipeOut,
   HANDLE_PREFIX.ifaceIn,
-  HANDLE_PREFIX.bpInstOut,
+  HANDLE_PREFIX.subgraphOut,
 ];
 
 export function handleIdForIngredient(recipeId: string, itemId: string, index: number) {
@@ -71,19 +71,21 @@ export function handleIdForInterface(kind: 'input' | 'output', itemId: string) {
   return `${prefix}:${itemId}`;
 }
 
-export function handleIdForBlueprintInput(internalNodeId: string, itemId: string) {
-  return `${HANDLE_PREFIX.bpInstIn}:${internalNodeId}:${itemId}`;
+// Subgraph-instance handles: blueprint and factory instance nodes share this
+// wire format so flow.ts can treat them uniformly.
+export function handleIdForSubgraphInput(internalNodeId: string, itemId: string) {
+  return `${HANDLE_PREFIX.subgraphIn}:${internalNodeId}:${itemId}`;
 }
 
-export function handleIdForBlueprintOutput(internalNodeId: string, itemId: string) {
-  return `${HANDLE_PREFIX.bpInstOut}:${internalNodeId}:${itemId}`;
+export function handleIdForSubgraphOutput(internalNodeId: string, itemId: string) {
+  return `${HANDLE_PREFIX.subgraphOut}:${internalNodeId}:${itemId}`;
 }
 
-export function internalNodeIdFromBlueprintHandle(handleId: string): string | null {
+export function internalNodeIdFromSubgraphHandle(handleId: string): string | null {
   const parts = handleId.split(':');
   const prefix = parts[0];
   if (
-    (prefix === HANDLE_PREFIX.bpInstIn || prefix === HANDLE_PREFIX.bpInstOut) &&
+    (prefix === HANDLE_PREFIX.subgraphIn || prefix === HANDLE_PREFIX.subgraphOut) &&
     parts.length >= 3
   ) {
     return parts[1];

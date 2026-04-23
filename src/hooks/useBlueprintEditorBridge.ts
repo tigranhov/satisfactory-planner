@@ -5,8 +5,8 @@ import { useActiveGraphId } from './useActiveGraph';
 import { useNavigationStore, selectActiveGraphId } from '@/store/navigationStore';
 import { newEdgeId, newNodeId } from '@/lib/ids';
 import {
-  handleIdForBlueprintInput,
-  handleIdForBlueprintOutput,
+  handleIdForSubgraphInput,
+  handleIdForSubgraphOutput,
   handleIdForInterface,
 } from '@/models/factory';
 import type { Blueprint, BlueprintId } from '@/models/blueprint';
@@ -174,7 +174,7 @@ export function extractSelectionToBlueprint(
         dir: 'in',
         outerSource: be.source,
         outerSourceHandle: be.sourceHandle,
-        bpTargetHandle: handleIdForBlueprintInput(ifaceId, be.itemId),
+        bpTargetHandle: handleIdForSubgraphInput(ifaceId, be.itemId),
         itemId: be.itemId,
         rate: be.rate,
       });
@@ -192,7 +192,7 @@ export function extractSelectionToBlueprint(
         dir: 'out',
         outerTarget: be.target,
         outerTargetHandle: be.targetHandle,
-        bpSourceHandle: handleIdForBlueprintOutput(ifaceId, be.itemId),
+        bpSourceHandle: handleIdForSubgraphOutput(ifaceId, be.itemId),
         itemId: be.itemId,
         rate: be.rate,
       });

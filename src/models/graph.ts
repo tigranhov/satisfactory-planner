@@ -4,7 +4,7 @@ export type GraphId = string;
 export type NodeId = string;
 export type EdgeId = string;
 
-export type NodeKind = 'recipe' | 'composite' | 'input' | 'output' | 'blueprint';
+export type NodeKind = 'recipe' | 'factory' | 'input' | 'output' | 'blueprint';
 
 export interface RecipeNodeData {
   kind: 'recipe';
@@ -14,9 +14,9 @@ export interface RecipeNodeData {
   somersloops: number; // 0..machine.somersloopSlots
 }
 
-export interface CompositeNodeData {
-  kind: 'composite';
-  subGraphId: GraphId;
+export interface FactoryNodeData {
+  kind: 'factory';
+  factoryGraphId: GraphId;
   label: string;
 }
 
@@ -36,7 +36,7 @@ export interface BlueprintNodeData {
 
 export type NodeData =
   | RecipeNodeData
-  | CompositeNodeData
+  | FactoryNodeData
   | InterfaceNodeData
   | BlueprintNodeData;
 

@@ -13,24 +13,16 @@ export default function TopBar() {
   const graphs = useGraphStore((s) => s.graphs);
   const activeGraphId = useActiveGraphId();
   const addNodeToActive = useGraphStore((s) => s.addNode);
-  const graphsState = useGraphStore.getState;
+  const registerGraph = useGraphStore((s) => s.registerGraph);
 
-  const handleAddComposite = () => {
-    const subId = newGraphId();
-    // Register the new subgraph
-    useGraphStore.setState((s) => ({
-      graphs: {
-        ...s.graphs,
-        [subId]: { id: subId, name: 'Subgraph', nodes: [], edges: [] },
-      },
-    }));
+  const handleAddFactory = () => {
+    const factoryGraphId = newGraphId();
+    registerGraph(factoryGraphId, 'Factory');
     addNodeToActive(activeGraphId, { x: 200, y: 200 }, {
-      kind: 'composite',
-      subGraphId: subId,
-      label: 'Subgraph',
+      kind: 'factory',
+      factoryGraphId,
+      label: 'Factory',
     });
-    // Keep ref to avoid unused warning
-    void graphsState;
   };
 
   return (
@@ -64,12 +56,12 @@ export default function TopBar() {
           Blueprints
         </button>
         <button
-          onClick={handleAddComposite}
+          onClick={handleAddFactory}
           className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"
-          title="Add composite (nested) node"
+          title="Add nested factory"
         >
           <Plus className="h-4 w-4" />
-          Composite
+          Factory
         </button>
         <button
           className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"

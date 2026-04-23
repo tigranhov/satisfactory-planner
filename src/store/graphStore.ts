@@ -5,6 +5,8 @@ import { newEdgeId, newGraphId, newNodeId, ROOT_GRAPH_ID } from '@/lib/ids';
 interface GraphState {
   graphs: Record<GraphId, Graph>;
   addGraph: (name: string, parentNodeId?: NodeId) => GraphId;
+  registerGraph: (id: GraphId, name: string) => void;
+  renameGraph: (graphId: GraphId, name: string) => void;
   addNode: (graphId: GraphId, position: { x: number; y: number }, data: NodeData) => NodeId;
   updateNode: (graphId: GraphId, nodeId: NodeId, patch: Partial<GraphNode>) => void;
   removeNode: (graphId: GraphId, nodeId: NodeId) => void;
@@ -31,6 +33,19 @@ export const useGraphStore = create<GraphState>((set) => ({
     }));
     return id;
   },
+
+  registerGraph: (id, name) =>
+    set((s) => {
+      if (s.graphs[id]) return s;
+      return { graphs: { ...s.graphs, [id]: { id, name, nodes: [], edges: [] } } };
+    }),
+
+  renameGraph: (graphId, name) =>
+    set((s) => {
+      const g = s.graphs[graphId];
+      if (!g || g.name === name) return s;
+      return { graphs: { ...s.graphs, [graphId]: { ...g, name } } };
+    }),
 
   addNode: (graphId, position, data) => {
     const id = newNodeId();

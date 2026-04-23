@@ -19,13 +19,14 @@ import { useGraphStore } from '@/store/graphStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
-import CompositeNode from './nodes/CompositeNode';
+import FactoryNode from './nodes/FactoryNode';
 import InterfaceNode from './nodes/InterfaceNode';
 import BlueprintNode from './nodes/BlueprintNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
-import { computeFlows, type BlueprintLookup, type HandleFlow } from '@/models/flow';
+import { computeFlows, type HandleFlow, type SubgraphResolver } from '@/models/flow';
+import { useSubgraphResolver } from '@/hooks/useSubgraphResolver';
 import {
   itemIdFromSourceHandle,
   itemsPerMinute,
@@ -38,6 +39,7 @@ import {
   openBlueprintForEditing,
   placeBlueprintOnActiveGraph,
 } from '@/hooks/useBlueprintEditorBridge';
+import { ROOT_GRAPH_ID } from '@/lib/ids';
 import type {
   BlueprintNodeData,
   Graph,
@@ -66,15 +68,15 @@ const gameData = loadGameData();
 
 const nodeTypes = {
   recipe: RecipeNode,
-  composite: CompositeNode,
+  factory: FactoryNode,
   input: InterfaceNode,
   output: InterfaceNode,
   blueprint: BlueprintNode,
 };
 const edgeTypes = { rate: RateEdge };
 
-function graphToFlow(graph: Graph, blueprints: BlueprintLookup): { nodes: Node[]; edges: Edge[] } {
-  const flows = computeFlows(graph, gameData, blueprints);
+function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[]; edges: Edge[] } {
+  const flows = computeFlows(graph, gameData, resolver);
   const nodes: Node[] = graph.nodes.map((n) => {
     const handleMap = flows.targetHandles.get(n.id);
     const handleFlows: Record<string, HandleFlow> = {};
@@ -113,6 +115,10 @@ interface Props {
 export default function GraphCanvas({ onSelectNode }: Props) {
   const activeGraphId = useActiveGraphId();
   const activeGraph = useActiveGraph();
+  const resolver = useSubgraphResolver();
+  // Subscribe to the whole maps so the effect re-runs when a nested subgraph
+  // changes — the active graph's own reference doesn't change then.
+  const graphs = useGraphStore((s) => s.graphs);
   const blueprints = useBlueprintStore((s) => s.blueprints);
   const store = useGraphStore;
   const enter = useNavigationStore((s) => s.enter);
@@ -143,7 +149,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setEdges([]);
       return;
     }
-    const { nodes: srcNodes, edges: srcEdges } = graphToFlow(activeGraph, blueprints);
+    const { nodes: srcNodes, edges: srcEdges } = graphToFlow(activeGraph, resolver);
     setNodes((prev) => {
       const byId = new Map(prev.map((n) => [n.id, n]));
       return srcNodes.map((n) => {
@@ -152,7 +158,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       });
     });
     setEdges(srcEdges);
-  }, [activeGraph, blueprints, setNodes, setEdges]);
+  }, [activeGraph, resolver, graphs, blueprints, setNodes, setEdges]);
 
   const onNodeDragStop = useCallback(
     (_e: React.MouseEvent, node: Node) => {
@@ -209,18 +215,13 @@ export default function GraphCanvas({ onSelectNode }: Props) {
 
   const onNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      if (node.type === 'composite') {
-        const subGraphId = (node.data as { subGraphId?: string }).subGraphId;
-        if (subGraphId) enter(subGraphId);
+      if (node.type === 'factory') {
+        const factoryGraphId = (node.data as { factoryGraphId?: string }).factoryGraphId;
+        if (factoryGraphId) enter(factoryGraphId);
       }
     },
     [enter],
   );
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
 
   const onCanvasContextMenu = useCallback(
     (event: React.MouseEvent) => {
@@ -266,9 +267,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [],
   );
 
-  const isEditingBlueprint = useBlueprintStore(
-    (s) => activeGraphId in s.blueprints,
-  );
+  const isSubgraph = activeGraphId !== ROOT_GRAPH_ID;
 
   const onPointerMove = useCallback(
     (event: React.PointerEvent) => {
@@ -465,32 +464,21 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     return { nodeId: only, data: node.data };
   })();
 
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const recipeId = event.dataTransfer.getData('application/x-recipe-id');
-      if (!recipeId) return;
-      const recipe = gameData.recipes[recipeId];
-      if (!recipe) return;
-
-      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      store.getState().addNode(activeGraphId, position, {
-        kind: 'recipe',
-        recipeId,
-        clockSpeed: 1,
-        count: 1,
-        somersloops: 0,
-      });
-    },
-    [activeGraphId, screenToFlowPosition, store],
-  );
+  // Factory nodes reference a subgraph in graphStore, not embedded nodes, so
+  // they can't be packaged into a self-contained blueprint record.
+  const selectionHasFactory = (() => {
+    if (!activeGraph) return false;
+    for (const id of nodeMenuTargets) {
+      const n = activeGraph.nodes.find((x) => x.id === id);
+      if (n?.data.kind === 'factory') return true;
+    }
+    return false;
+  })();
 
   return (
     <div
       ref={wrapperRef}
       className="relative h-full w-full min-h-0 min-w-0 overflow-hidden"
-      onDragOver={onDragOver}
-      onDrop={onDrop}
       onContextMenu={onCanvasContextMenu}
       onPointerMove={onPointerMove}
     >
@@ -526,7 +514,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onClose={() => setMenu(null)}
           onSelectRecipe={onPickRecipe}
           onSelectBlueprint={onPickBlueprint}
-          allowInterface={isEditingBlueprint}
+          allowInterface={isSubgraph}
           onSelectInterface={onPickInterface}
         />
       )}
@@ -538,7 +526,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onDelete={() => deleteTargets(nodeMenuTargets)}
           onDuplicate={() => duplicateTargets(nodeMenuTargets)}
           onExtract={
-            nodeMenuTargets.size > 0 && !nodeMenuBlueprint
+            nodeMenuTargets.size > 0 && !nodeMenuBlueprint && !selectionHasFactory
               ? () => {
                   extractSelectionToBlueprint(activeGraphId, nodeMenuTargets);
                 }
