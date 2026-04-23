@@ -5,7 +5,6 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
-  addEdge,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -22,13 +21,16 @@ import RecipeNode from './nodes/RecipeNode';
 import FactoryNode from './nodes/FactoryNode';
 import InterfaceNode from './nodes/InterfaceNode';
 import BlueprintNode from './nodes/BlueprintNode';
+import HubNode from './nodes/HubNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import { computeFlows, type HandleFlow, type SubgraphResolver } from '@/models/flow';
 import { useSubgraphResolver } from '@/hooks/useSubgraphResolver';
 import {
+  hubItemIdFromEdges,
   itemIdFromSourceHandle,
+  itemIdFromTargetHandle,
   itemsPerMinute,
   nodePowerMW,
   somersloopMultiplier,
@@ -72,20 +74,35 @@ const nodeTypes = {
   input: InterfaceNode,
   output: InterfaceNode,
   blueprint: BlueprintNode,
+  hub: HubNode,
 };
 const edgeTypes = { rate: RateEdge };
 
 function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[]; edges: Edge[] } {
   const flows = computeFlows(graph, gameData, resolver);
+  // Single edge pass → hub item by node. Avoids scanning graph.edges once per
+  // hub during the node map below (H×E → O(E)).
+  const hubIds = new Set<string>();
+  for (const n of graph.nodes) if (n.data.kind === 'hub') hubIds.add(n.id);
+  const hubItemByNode = new Map<string, string>();
+  if (hubIds.size) {
+    for (const e of graph.edges) {
+      if (!e.itemId) continue;
+      if (hubIds.has(e.source) && !hubItemByNode.has(e.source)) hubItemByNode.set(e.source, e.itemId);
+      if (hubIds.has(e.target) && !hubItemByNode.has(e.target)) hubItemByNode.set(e.target, e.itemId);
+    }
+  }
   const nodes: Node[] = graph.nodes.map((n) => {
     const handleMap = flows.targetHandles.get(n.id);
     const handleFlows: Record<string, HandleFlow> = {};
     if (handleMap) for (const [hid, hf] of handleMap) handleFlows[hid] = hf;
+    const extra: Record<string, unknown> = { handleFlows };
+    if (n.data.kind === 'hub') extra.currentItemId = hubItemByNode.get(n.id) ?? null;
     return {
       id: n.id,
       position: n.position,
       type: n.data.kind,
-      data: { ...(n.data as unknown as Record<string, unknown>), handleFlows },
+      data: { ...(n.data as unknown as Record<string, unknown>), ...extra },
     };
   });
   const edges: Edge[] = graph.edges.map((e) => {
@@ -188,10 +205,25 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       if (!connection.source || !connection.target) return;
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
-      const itemId = itemIdFromSourceHandle(connection.sourceHandle ?? '');
-      // Use React Flow's addEdge to produce a well-formed id we can reuse
-      const next = addEdge(connection, [] as Edge[]);
-      const added = next[0];
+      // Endpoint itemIds come from the handle string for fixed-item nodes
+      // (recipes, interface boundaries, subgraphs). For hubs — whose item
+      // is derived from incident edges — we look at the hub's existing
+      // connections. Empty string means "no item committed yet".
+      const sourceNode = g.nodes.find((n) => n.id === connection.source);
+      const targetNode = g.nodes.find((n) => n.id === connection.target);
+      const sourceItemId =
+        sourceNode?.data.kind === 'hub'
+          ? hubItemIdFromEdges(g, sourceNode.id) ?? ''
+          : itemIdFromSourceHandle(connection.sourceHandle ?? '');
+      const targetItemId =
+        targetNode?.data.kind === 'hub'
+          ? hubItemIdFromEdges(g, targetNode.id) ?? ''
+          : itemIdFromTargetHandle(connection.targetHandle ?? '');
+      // Reject connections where both ends disagree on item.
+      if (sourceItemId && targetItemId && sourceItemId !== targetItemId) return;
+      // Reject two unset hubs connected together — there's no item to carry.
+      const itemId = sourceItemId || targetItemId;
+      if (!itemId) return;
       const newEdge: Omit<GraphEdge, 'id'> = {
         source: connection.source,
         sourceHandle: connection.sourceHandle ?? '',
@@ -201,7 +233,6 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         rate: 0,
       };
       store.getState().addEdge(activeGraphId, newEdge);
-      void added;
     },
     [activeGraphId, store],
   );
@@ -265,6 +296,14 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setMenu(null);
     },
     [],
+  );
+
+  const onAddHub = useCallback(
+    (position: { x: number; y: number }) => {
+      store.getState().addNode(activeGraphId, position, { kind: 'hub' });
+      setMenu(null);
+    },
+    [activeGraphId, store],
   );
 
   const isSubgraph = activeGraphId !== ROOT_GRAPH_ID;
@@ -516,6 +555,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onSelectBlueprint={onPickBlueprint}
           allowInterface={isSubgraph}
           onSelectInterface={onPickInterface}
+          onAddHub={onAddHub}
         />
       )}
       {nodeMenu && (

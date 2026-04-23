@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowLeftFromLine, ArrowRightFromLine, Package, Search, Wrench } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  Package,
+  Search,
+  Waypoints,
+  Wrench,
+} from 'lucide-react';
 import { loadGameData, getAllItemsSorted, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
@@ -49,6 +57,9 @@ interface Props {
     itemId: string,
     flowPosition: { x: number; y: number },
   ) => void;
+  // Utility nodes place instantly from the always-visible side strip; each
+  // kind has its own callback. Add more as splitters / mergers land.
+  onAddHub?: (flowPosition: { x: number; y: number }) => void;
 }
 
 function filterByName(rows: TopRow[], query: string): TopRow[] {
@@ -68,6 +79,7 @@ export default function CanvasContextMenu({
   onSelectBlueprint,
   allowInterface = false,
   onSelectInterface,
+  onAddHub,
 }: Props) {
   const [mode, setMode] = useState<Mode>('recipe');
   const [query, setQuery] = useState('');
@@ -264,7 +276,7 @@ export default function CanvasContextMenu({
     }
   };
 
-  const MENU_W = 340;
+  const MENU_W = 380;
   const MENU_H = 440;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
@@ -288,10 +300,11 @@ export default function CanvasContextMenu({
   return (
     <div
       ref={rootRef}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
+      className="fixed z-50 flex overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
       style={{ left, top, width: MENU_W, height: MENU_H }}
       onContextMenu={(e) => e.preventDefault()}
     >
+      <div className="flex min-w-0 flex-1 flex-col">
       {!showingRecipes && (
         <div className="flex gap-1 border-b border-border bg-panel-hi p-1.5">
           <ModeButton
@@ -423,6 +436,19 @@ export default function CanvasContextMenu({
               />
             ),
           )}
+      </div>
+      </div>
+      <div className="flex w-9 flex-col items-center gap-1 border-l border-border bg-panel-hi py-1.5">
+        <button
+          onClick={() => {
+            onAddHub?.(flowPosition);
+            onClose();
+          }}
+          title="Add Hub"
+          className="flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel hover:text-amber-300"
+        >
+          <Waypoints className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

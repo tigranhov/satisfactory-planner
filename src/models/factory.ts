@@ -1,5 +1,5 @@
 import type { GameData, Recipe } from '@/data/types';
-import type { RecipeNodeData } from './graph';
+import type { Graph, NodeId, RecipeNodeData } from './graph';
 
 export function itemsPerMinute(recipe: Recipe, amount: number, clockSpeed = 1, count = 1) {
   return (amount * 60) / recipe.durationSec * clockSpeed * count;
@@ -41,8 +41,10 @@ export function nodePowerMW(recipe: Recipe, node: RecipeNodeData, data: GameData
   return recipe.powerMW * node.count * Math.pow(node.clockSpeed, 1.6) * Math.pow(boost, 2);
 }
 
-// All handle-id prefixes live here. Every format places itemId at parts[2]
-// so itemIdFromSourceHandle works uniformly across source handles.
+// All handle-id prefixes live here. itemId lives at parts[1] for ifaceIn
+// (2 segments) and at parts[2] for recipeIn/Out and subgraphIn/Out. Hub
+// handles are static — itemId is not encoded in the handle string because
+// the hub's item is derived from incident edges.
 const HANDLE_PREFIX = {
   recipeIn: 'in',
   recipeOut: 'out',
@@ -50,6 +52,8 @@ const HANDLE_PREFIX = {
   ifaceOut: 'bpout',
   subgraphIn: 'bpi-in',
   subgraphOut: 'bpi-out',
+  hubIn: 'hub-in',
+  hubOut: 'hub-out',
 } as const;
 
 const SOURCE_HANDLE_PREFIXES: readonly string[] = [
@@ -69,6 +73,25 @@ export function handleIdForProduct(recipeId: string, itemId: string, index: numb
 export function handleIdForInterface(kind: 'input' | 'output', itemId: string) {
   const prefix = kind === 'input' ? HANDLE_PREFIX.ifaceIn : HANDLE_PREFIX.ifaceOut;
   return `${prefix}:${itemId}`;
+}
+
+export const HUB_IN_HANDLE = HANDLE_PREFIX.hubIn;
+export const HUB_OUT_HANDLE = HANDLE_PREFIX.hubOut;
+
+export function isHubHandle(handleId: string): 'in' | 'out' | null {
+  if (handleId === HUB_IN_HANDLE) return 'in';
+  if (handleId === HUB_OUT_HANDLE) return 'out';
+  return null;
+}
+
+// A hub's "item type" is derived from whatever flows through it — i.e. the
+// itemId shared by its incident edges. Returns null when the hub is
+// disconnected, which UI treats as the "?" unset state.
+export function hubItemIdFromEdges(graph: Graph, hubNodeId: NodeId): string | null {
+  for (const e of graph.edges) {
+    if (e.source === hubNodeId || e.target === hubNodeId) return e.itemId || null;
+  }
+  return null;
 }
 
 // Subgraph-instance handles: blueprint and factory instance nodes share this
@@ -96,9 +119,22 @@ export function internalNodeIdFromSubgraphHandle(handleId: string): string | nul
 export function itemIdFromSourceHandle(handleId: string): string {
   const parts = handleId.split(':');
   if (!SOURCE_HANDLE_PREFIXES.includes(parts[0])) return '';
-  // recipeOut: out:recipeId:itemId:idx / ifaceIn: bpin:itemId (idx=1)
-  // / bpInstOut: bpi-out:internalId:itemId
+  // recipeOut: out:recipeId:itemId:idx / bpInstOut: bpi-out:internalId:itemId
+  // / ifaceIn: bpin:itemId (2 segments).
   return parts[0] === HANDLE_PREFIX.ifaceIn ? parts[1] ?? '' : parts[2] ?? '';
+}
+
+export function itemIdFromTargetHandle(handleId: string): string {
+  const parts = handleId.split(':');
+  switch (parts[0]) {
+    case HANDLE_PREFIX.recipeIn: // in:recipeId:itemId:idx
+    case HANDLE_PREFIX.subgraphIn: // bpi-in:internalId:itemId
+      return parts[2] ?? '';
+    case HANDLE_PREFIX.ifaceOut: // bpout:itemId
+      return parts[1] ?? '';
+    default:
+      return '';
+  }
 }
 
 export function handleIndexFromId(handleId: string): number | null {

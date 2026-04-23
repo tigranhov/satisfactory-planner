@@ -137,6 +137,14 @@ export default function Inspector({ selectedNodeId }: Props) {
     );
   }
 
+  if (node.data.kind === 'hub') {
+    return (
+      <div className="border-l border-border bg-panel p-4 text-sm text-[#6b7388]">
+        Hub node — item type is set by the first connection.
+      </div>
+    );
+  }
+
   return (
     <div className="border-l border-border bg-panel p-4 text-sm text-[#6b7388]">
       Interface node ({node.data.kind}): {node.data.itemId}
