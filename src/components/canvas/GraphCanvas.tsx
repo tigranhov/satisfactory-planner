@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -6,12 +6,12 @@ import {
   MiniMap,
   ReactFlow,
   addEdge,
+  useEdgesState,
+  useNodesState,
   useReactFlow,
   type Connection,
   type Edge,
-  type EdgeChange,
   type Node,
-  type NodeChange,
   type OnSelectionChangeParams,
 } from '@xyflow/react';
 import { useActiveGraph, useActiveGraphId } from '@/hooks/useActiveGraph';
@@ -21,7 +21,8 @@ import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
 import CompositeNode from './nodes/CompositeNode';
 import RateEdge from './edges/RateEdge';
-import type { Graph, GraphEdge, GraphNode } from '@/models/graph';
+import { computeEdgeFlows } from '@/models/flow';
+import type { Graph, GraphEdge } from '@/models/graph';
 
 const gameData = loadGameData();
 
@@ -35,15 +36,19 @@ function graphToFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
     type: n.data.kind,
     data: n.data as unknown as Record<string, unknown>,
   }));
-  const edges: Edge[] = graph.edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    sourceHandle: e.sourceHandle,
-    target: e.target,
-    targetHandle: e.targetHandle,
-    type: 'rate',
-    data: { rate: e.rate, itemId: e.itemId },
-  }));
+  const flows = computeEdgeFlows(graph, gameData);
+  const edges: Edge[] = graph.edges.map((e) => {
+    const flow = flows.get(e.id);
+    return {
+      id: e.id,
+      source: e.source,
+      sourceHandle: e.sourceHandle,
+      target: e.target,
+      targetHandle: e.targetHandle,
+      type: 'rate',
+      data: { rate: flow?.rate ?? 0, overbudget: flow?.overbudget ?? false, itemId: e.itemId },
+    };
+  });
   return { nodes, edges };
 }
 
@@ -59,42 +64,49 @@ export default function GraphCanvas({ onSelectNode }: Props) {
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const flow = useMemo(() => (activeGraph ? graphToFlow(activeGraph) : { nodes: [], edges: [] }), [
-    activeGraph,
-  ]);
+  // React Flow's internal state must own the nodes array: it mutates it in place to
+  // store `measured` dimensions, and losing that mutation reverts nodes to
+  // visibility:hidden. We mirror Zustand into this state and merge on updates to
+  // preserve those internal fields.
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
+  useEffect(() => {
+    if (!activeGraph) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    const { nodes: srcNodes, edges: srcEdges } = graphToFlow(activeGraph);
+    setNodes((prev) => {
+      const byId = new Map(prev.map((n) => [n.id, n]));
+      return srcNodes.map((n) => {
+        const existing = byId.get(n.id);
+        return existing ? { ...existing, position: n.position, data: n.data, type: n.type } : n;
+      });
+    });
+    setEdges(srcEdges);
+  }, [activeGraph, setNodes, setEdges]);
+
+  const onNodeDragStop = useCallback(
+    (_e: React.MouseEvent, node: Node) => {
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
-      // Apply position/remove/select changes to our store.
-      const updatedNodes: GraphNode[] = g.nodes
-        .map((node) => {
-          const change = changes.find((c) => 'id' in c && c.id === node.id);
-          if (!change) return node;
-          if (change.type === 'position' && change.position) {
-            return { ...node, position: change.position };
-          }
-          if (change.type === 'remove') return null;
-          return node;
-        })
-        .filter(Boolean) as GraphNode[];
-      store.getState().setNodes(activeGraphId, updatedNodes);
+      store.getState().updateNode(activeGraphId, node.id, { position: node.position });
     },
     [activeGraphId, store],
   );
 
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      const g = store.getState().graphs[activeGraphId];
-      if (!g) return;
-      const removed = new Set(
-        changes.filter((c) => c.type === 'remove').map((c) => (c as { id: string }).id),
-      );
-      if (removed.size === 0) return;
-      store
-        .getState()
-        .setEdges(activeGraphId, g.edges.filter((e) => !removed.has(e.id)));
+  const onNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      for (const n of deleted) store.getState().removeNode(activeGraphId, n.id);
+    },
+    [activeGraphId, store],
+  );
+
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      for (const e of deleted) store.getState().removeEdge(activeGraphId, e.id);
     },
     [activeGraphId, store],
   );
@@ -166,18 +178,20 @@ export default function GraphCanvas({ onSelectNode }: Props) {
   );
 
   return (
-    <div ref={wrapperRef} className="relative h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
+    <div ref={wrapperRef} className="relative h-full w-full min-h-0 min-w-0 overflow-hidden" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
-        nodes={flow.nodes}
-        edges={flow.edges}
+        nodes={nodes}
+        edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
-        fitView
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2d3445" />

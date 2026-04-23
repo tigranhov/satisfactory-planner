@@ -36,6 +36,13 @@ export function handleIdForProduct(recipeId: string, itemId: string, index: numb
   return `out:${recipeId}:${itemId}:${index}`;
 }
 
+export function handleIndexFromId(handleId: string): number | null {
+  const parts = handleId.split(':');
+  if (parts.length < 4) return null;
+  const idx = Number(parts[3]);
+  return Number.isFinite(idx) ? idx : null;
+}
+
 export function lookupRecipeForNode(data: GameData, node: RecipeNodeData) {
   return data.recipes[node.recipeId];
 }

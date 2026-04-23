@@ -21,10 +21,16 @@ export default function RateEdge({
   });
 
   const rate = (data as { rate?: number } | undefined)?.rate ?? 0;
+  const overbudget = (data as { overbudget?: boolean } | undefined)?.overbudget ?? false;
 
   return (
     <>
-      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} />
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={overbudget ? { stroke: '#ef4444' } : undefined}
+      />
       <EdgeLabelRenderer>
         <div
           style={{
@@ -32,7 +38,11 @@ export default function RateEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: 'all',
           }}
-          className="rounded border border-border bg-panel px-1.5 py-0.5 text-[10px] text-[#e6e8ee]"
+          className={`rounded border px-1.5 py-0.5 text-[10px] ${
+            overbudget
+              ? 'border-red-500 bg-panel text-red-400'
+              : 'border-border bg-panel text-[#e6e8ee]'
+          }`}
         >
           {rate.toFixed(1)}/min
         </div>

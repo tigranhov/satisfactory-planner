@@ -22,7 +22,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-panel">
+    <div className="flex h-full min-h-0 flex-col border-r border-border bg-panel">
       <div className="border-b border-border p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7388]" />
