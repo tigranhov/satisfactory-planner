@@ -2,6 +2,7 @@ import { useActiveGraph } from '@/hooks/useActiveGraph';
 import { useGraphStore } from '@/store/graphStore';
 import { loadGameData } from '@/data/loader';
 import { nodePowerMW } from '@/models/factory';
+import PowerReadout from '@/components/canvas/editors/PowerReadout';
 
 const gameData = loadGameData();
 
@@ -33,7 +34,7 @@ export default function Inspector({ selectedNodeId }: Props) {
   if (node.data.kind === 'recipe') {
     const recipeData = node.data;
     const recipe = gameData.recipes[recipeData.recipeId];
-    const power = nodePowerMW(recipe, recipeData);
+    const power = nodePowerMW(recipe, recipeData, gameData);
     return (
       <div className="flex h-full flex-col border-l border-border bg-panel p-4 text-sm">
         <div className="mb-2 text-xs uppercase tracking-wider text-[#6b7388]">Recipe Node</div>
@@ -68,13 +69,9 @@ export default function Inspector({ selectedNodeId }: Props) {
         />
         <div className="mt-2 border-t border-border pt-2 text-xs text-[#6b7388]">
           <div>Machine: {gameData.machines[recipe.machineId]?.name}</div>
-          {power < 0 ? (
-            <div className="text-accent">
-              Generating: {Math.abs(power).toFixed(1)} MW
-            </div>
-          ) : (
-            <div>Power: {power.toFixed(1)} MW</div>
-          )}
+          <div>
+            <PowerReadout powerMW={power} />
+          </div>
           <div>Duration: {recipe.durationSec}s</div>
         </div>
       </div>

@@ -11,6 +11,7 @@ export interface RecipeNodeData {
   recipeId: RecipeId;
   clockSpeed: number; // 0.01 - 2.5 (1.0 = 100%)
   count: number;
+  somersloops: number; // 0..machine.somersloopSlots
 }
 
 export interface CompositeNodeData {

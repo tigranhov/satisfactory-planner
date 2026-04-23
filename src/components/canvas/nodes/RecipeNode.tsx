@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
+import { Sparkles, Zap } from 'lucide-react';
 import ItemHandle from '../handles/ItemHandle';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { loadGameData } from '@/data/loader';
@@ -22,8 +23,14 @@ function RecipeNode({ id, data, selected }: NodeProps) {
   if (!recipe) return null;
 
   const inputs = recipeInputs(recipe, nodeData);
-  const outputs = recipeOutputs(recipe, nodeData);
+  const outputs = recipeOutputs(recipe, nodeData, gameData);
   const machine = gameData.machines[recipe.machineId];
+  const clockPct = Math.round(nodeData.clockSpeed * 100);
+  const showClock = clockPct !== 100;
+  const sloopSlots = machine?.somersloopSlots ?? 0;
+  const showSloops = nodeData.somersloops > 0 && sloopSlots > 0;
+  const clockColor =
+    clockPct > 100 ? 'text-accent border-accent/40' : 'text-sky-400 border-sky-500/40';
 
   return (
     <div
@@ -33,7 +40,29 @@ function RecipeNode({ id, data, selected }: NodeProps) {
     >
       <div className="flex items-center gap-2 rounded-t-md border-b border-border bg-panel-hi px-3 py-1.5">
         <IconOrLabel iconBasename={machine?.icon} name={machine?.name ?? '?'} bgClassName="bg-panel" />
-        <span className="font-medium">{recipe.name}</span>
+        <span className="truncate font-medium">{recipe.name}</span>
+        {(showClock || showSloops) && (
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {showClock && (
+              <span
+                className={`flex items-center gap-0.5 rounded border px-1 py-0.5 text-[10px] font-medium ${clockColor}`}
+                title={`Clock speed: ${clockPct}%`}
+              >
+                <Zap className="h-3 w-3" />
+                {clockPct}%
+              </span>
+            )}
+            {showSloops && (
+              <span
+                className="flex items-center gap-0.5 rounded border border-fuchsia-500/40 px-1 py-0.5 text-[10px] font-medium text-fuchsia-400"
+                title={`Somersloops: ${nodeData.somersloops}/${sloopSlots}`}
+              >
+                <Sparkles className="h-3 w-3" />
+                {nodeData.somersloops}/{sloopSlots}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-0 py-1">
         <div>

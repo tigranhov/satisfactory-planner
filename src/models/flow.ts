@@ -38,7 +38,7 @@ function handleRate(
   const io =
     side === 'in'
       ? recipeInputs(recipe, node.data as RecipeNodeData)
-      : recipeOutputs(recipe, node.data as RecipeNodeData);
+      : recipeOutputs(recipe, node.data as RecipeNodeData, data);
   const index = handleIndexFromId(handleId);
   return index != null && io[index] ? io[index].rate : 0;
 }

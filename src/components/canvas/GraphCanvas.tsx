@@ -24,7 +24,8 @@ import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import { computeFlows, type HandleFlow } from '@/models/flow';
-import type { Graph, GraphEdge, NodeData } from '@/models/graph';
+import { itemsPerMinute, nodePowerMW, somersloopMultiplier } from '@/models/factory';
+import type { Graph, GraphEdge, NodeData, RecipeNodeData } from '@/models/graph';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -217,6 +218,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         recipeId,
         clockSpeed: 1,
         count: 1,
+        somersloops: 0,
       });
       setMenu(null);
     },
@@ -358,6 +360,46 @@ export default function GraphCanvas({ onSelectNode }: Props) {
 
   const nodeMenuTargets = nodeMenu ? resolveTargets(nodeMenu.nodeId) : new Set<string>();
 
+  // Recipe controls only render when the context menu targets a single recipe node.
+  const nodeMenuRecipe = (() => {
+    if (!nodeMenu || nodeMenuTargets.size !== 1) return null;
+    const only = [...nodeMenuTargets][0];
+    const node = activeGraph?.nodes.find((n) => n.id === only);
+    if (!node || node.data.kind !== 'recipe') return null;
+    const recipe = gameData.recipes[node.data.recipeId];
+    if (!recipe) return null;
+    const machine = gameData.machines[recipe.machineId];
+    // Primary product = first non-byproduct; fall back to first product.
+    const primary = recipe.products.find((p) => !p.isByproduct) ?? recipe.products[0];
+    const primaryItem = primary ? gameData.items[primary.itemId] : undefined;
+    const baseRate = primary
+      ? itemsPerMinute(recipe, primary.amount, 1, node.data.count) *
+        somersloopMultiplier(recipe, node.data, gameData)
+      : 0;
+    return {
+      nodeId: only,
+      data: node.data,
+      powerShardSlots: machine?.powerShardSlots ?? 0,
+      somersloopSlots: machine?.somersloopSlots ?? 0,
+      powerMW: nodePowerMW(recipe, node.data, gameData),
+      primary: primary && primaryItem
+        ? { baseRate, itemName: primaryItem.name, itemIcon: primaryItem.icon }
+        : null,
+    };
+  })();
+
+  const updateRecipeNodeData = useCallback(
+    (nodeId: string, patch: Partial<Omit<RecipeNodeData, 'kind'>>) => {
+      const g = store.getState().graphs[activeGraphId];
+      const node = g?.nodes.find((n) => n.id === nodeId);
+      if (!node || node.data.kind !== 'recipe') return;
+      store.getState().updateNode(activeGraphId, nodeId, {
+        data: { ...node.data, ...patch },
+      });
+    },
+    [activeGraphId, store],
+  );
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
@@ -372,6 +414,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         recipeId,
         clockSpeed: 1,
         count: 1,
+        somersloops: 0,
       });
     },
     [activeGraphId, screenToFlowPosition, store],
@@ -426,6 +469,22 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onClose={() => setNodeMenu(null)}
           onDelete={() => deleteTargets(nodeMenuTargets)}
           onDuplicate={() => duplicateTargets(nodeMenuTargets)}
+          recipe={
+            nodeMenuRecipe
+              ? {
+                  clockSpeed: nodeMenuRecipe.data.clockSpeed,
+                  powerShardSlots: nodeMenuRecipe.powerShardSlots,
+                  somersloops: nodeMenuRecipe.data.somersloops,
+                  somersloopSlots: nodeMenuRecipe.somersloopSlots,
+                  powerMW: nodeMenuRecipe.powerMW,
+                  primaryOutput: nodeMenuRecipe.primary ?? undefined,
+                  onOverclock: (clockSpeed) =>
+                    updateRecipeNodeData(nodeMenuRecipe.nodeId, { clockSpeed }),
+                  onSomersloop: (somersloops) =>
+                    updateRecipeNodeData(nodeMenuRecipe.nodeId, { somersloops }),
+                }
+              : undefined
+          }
         />
       )}
     </div>
