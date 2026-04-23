@@ -1,5 +1,6 @@
 import { useActiveGraph } from '@/hooks/useActiveGraph';
 import { useGraphStore } from '@/store/graphStore';
+import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
 import { nodePowerMW } from '@/models/factory';
 import PowerReadout from '@/components/canvas/editors/PowerReadout';
@@ -13,6 +14,12 @@ interface Props {
 export default function Inspector({ selectedNodeId }: Props) {
   const activeGraph = useActiveGraph();
   const updateNode = useGraphStore((s) => s.updateNode);
+  const selectedNode = activeGraph?.nodes.find((n) => n.id === selectedNodeId);
+  const selectedBlueprintId =
+    selectedNode?.data.kind === 'blueprint' ? selectedNode.data.blueprintId : null;
+  const selectedBlueprint = useBlueprintStore((s) =>
+    selectedBlueprintId ? s.blueprints[selectedBlueprintId] : undefined,
+  );
 
   if (!activeGraph || !selectedNodeId) {
     return (
@@ -86,6 +93,35 @@ export default function Inspector({ selectedNodeId }: Props) {
         <div className="mt-2 text-xs text-[#6b7388]">
           Double-click the node on the canvas to open its subgraph.
         </div>
+      </div>
+    );
+  }
+
+  if (node.data.kind === 'blueprint') {
+    const bpData = node.data;
+    const bp = selectedBlueprint;
+    return (
+      <div className="flex h-full flex-col border-l border-border bg-panel p-4 text-sm">
+        <div className="mb-2 text-xs uppercase tracking-wider text-[#6b7388]">Blueprint Node</div>
+        <div className="mb-3 text-lg font-medium">{bp?.name ?? 'Missing blueprint'}</div>
+        <label className="mb-2 text-xs">Count</label>
+        <input
+          type="number"
+          min={1}
+          value={bpData.count}
+          onChange={(e) => {
+            const count = Math.max(1, Math.floor(Number(e.target.value) || 1));
+            updateNode(activeGraph.id, node.id, {
+              data: { ...bpData, count },
+            });
+          }}
+          className="mb-3 rounded border border-border bg-panel-hi px-2 py-1 outline-none focus:border-accent"
+        />
+        {bp?.description && (
+          <div className="mt-2 border-t border-border pt-2 text-xs text-[#9aa2b8]">
+            {bp.description}
+          </div>
+        )}
       </div>
     );
   }

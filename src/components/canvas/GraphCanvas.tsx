@@ -21,13 +21,30 @@ import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
 import CompositeNode from './nodes/CompositeNode';
 import InterfaceNode from './nodes/InterfaceNode';
+import BlueprintNode from './nodes/BlueprintNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
-import { computeFlows, type HandleFlow } from '@/models/flow';
-import { itemsPerMinute, nodePowerMW, somersloopMultiplier } from '@/models/factory';
+import { computeFlows, type BlueprintLookup, type HandleFlow } from '@/models/flow';
+import {
+  itemIdFromSourceHandle,
+  itemsPerMinute,
+  nodePowerMW,
+  somersloopMultiplier,
+} from '@/models/factory';
 import { useBlueprintStore } from '@/store/blueprintStore';
-import type { Graph, GraphEdge, NodeData, RecipeNodeData } from '@/models/graph';
+import {
+  extractSelectionToBlueprint,
+  openBlueprintForEditing,
+  placeBlueprintOnActiveGraph,
+} from '@/hooks/useBlueprintEditorBridge';
+import type {
+  BlueprintNodeData,
+  Graph,
+  GraphEdge,
+  NodeData,
+  RecipeNodeData,
+} from '@/models/graph';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -52,11 +69,12 @@ const nodeTypes = {
   composite: CompositeNode,
   input: InterfaceNode,
   output: InterfaceNode,
+  blueprint: BlueprintNode,
 };
 const edgeTypes = { rate: RateEdge };
 
-function graphToFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
-  const flows = computeFlows(graph, gameData);
+function graphToFlow(graph: Graph, blueprints: BlueprintLookup): { nodes: Node[]; edges: Edge[] } {
+  const flows = computeFlows(graph, gameData, blueprints);
   const nodes: Node[] = graph.nodes.map((n) => {
     const handleMap = flows.targetHandles.get(n.id);
     const handleFlows: Record<string, HandleFlow> = {};
@@ -95,6 +113,7 @@ interface Props {
 export default function GraphCanvas({ onSelectNode }: Props) {
   const activeGraphId = useActiveGraphId();
   const activeGraph = useActiveGraph();
+  const blueprints = useBlueprintStore((s) => s.blueprints);
   const store = useGraphStore;
   const enter = useNavigationStore((s) => s.enter);
   const { screenToFlowPosition } = useReactFlow();
@@ -124,7 +143,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setEdges([]);
       return;
     }
-    const { nodes: srcNodes, edges: srcEdges } = graphToFlow(activeGraph);
+    const { nodes: srcNodes, edges: srcEdges } = graphToFlow(activeGraph, blueprints);
     setNodes((prev) => {
       const byId = new Map(prev.map((n) => [n.id, n]));
       return srcNodes.map((n) => {
@@ -133,7 +152,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       });
     });
     setEdges(srcEdges);
-  }, [activeGraph, setNodes, setEdges]);
+  }, [activeGraph, blueprints, setNodes, setEdges]);
 
   const onNodeDragStop = useCallback(
     (_e: React.MouseEvent, node: Node) => {
@@ -163,9 +182,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       if (!connection.source || !connection.target) return;
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
-      // Infer itemId from the source handle id (format: "out:recipeId:itemId:index")
-      const parts = (connection.sourceHandle ?? '').split(':');
-      const itemId = parts.length >= 3 ? parts[2] : '';
+      const itemId = itemIdFromSourceHandle(connection.sourceHandle ?? '');
       // Use React Flow's addEdge to produce a well-formed id we can reuse
       const next = addEdge(connection, [] as Edge[]);
       const added = next[0];
@@ -239,6 +256,14 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setMenu(null);
     },
     [activeGraphId, store],
+  );
+
+  const onPickBlueprint = useCallback(
+    (blueprintId: string, position: { x: number; y: number }) => {
+      placeBlueprintOnActiveGraph(blueprintId, position);
+      setMenu(null);
+    },
+    [],
   );
 
   const isEditingBlueprint = useBlueprintStore(
@@ -420,6 +445,26 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [activeGraphId, store],
   );
 
+  const updateBlueprintNodeData = useCallback(
+    (nodeId: string, patch: Partial<Omit<BlueprintNodeData, 'kind' | 'blueprintId'>>) => {
+      const g = store.getState().graphs[activeGraphId];
+      const node = g?.nodes.find((n) => n.id === nodeId);
+      if (!node || node.data.kind !== 'blueprint') return;
+      store.getState().updateNode(activeGraphId, nodeId, {
+        data: { ...node.data, ...patch },
+      });
+    },
+    [activeGraphId, store],
+  );
+
+  const nodeMenuBlueprint = (() => {
+    if (!nodeMenu || nodeMenuTargets.size !== 1) return null;
+    const only = [...nodeMenuTargets][0];
+    const node = activeGraph?.nodes.find((n) => n.id === only);
+    if (!node || node.data.kind !== 'blueprint') return null;
+    return { nodeId: only, data: node.data };
+  })();
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
@@ -480,6 +525,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           flowPosition={menu.flow}
           onClose={() => setMenu(null)}
           onSelectRecipe={onPickRecipe}
+          onSelectBlueprint={onPickBlueprint}
           allowInterface={isEditingBlueprint}
           onSelectInterface={onPickInterface}
         />
@@ -491,6 +537,18 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onClose={() => setNodeMenu(null)}
           onDelete={() => deleteTargets(nodeMenuTargets)}
           onDuplicate={() => duplicateTargets(nodeMenuTargets)}
+          onExtract={
+            nodeMenuTargets.size > 0 && !nodeMenuBlueprint
+              ? () => {
+                  extractSelectionToBlueprint(activeGraphId, nodeMenuTargets);
+                }
+              : undefined
+          }
+          onEdit={
+            nodeMenuBlueprint
+              ? () => openBlueprintForEditing(nodeMenuBlueprint.data.blueprintId)
+              : undefined
+          }
           recipe={
             nodeMenuRecipe
               ? {
@@ -504,6 +562,14 @@ export default function GraphCanvas({ onSelectNode }: Props) {
                     updateRecipeNodeData(nodeMenuRecipe.nodeId, { clockSpeed }),
                   onSomersloop: (somersloops) =>
                     updateRecipeNodeData(nodeMenuRecipe.nodeId, { somersloops }),
+                }
+              : undefined
+          }
+          blueprint={
+            nodeMenuBlueprint
+              ? {
+                  count: nodeMenuBlueprint.data.count,
+                  onCount: (n) => updateBlueprintNodeData(nodeMenuBlueprint.nodeId, { count: n }),
                 }
               : undefined
           }

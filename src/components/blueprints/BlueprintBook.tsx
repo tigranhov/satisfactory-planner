@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Copy, MapPin, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
-import { openBlueprintForEditing } from '@/hooks/useBlueprintEditorBridge';
+import {
+  openBlueprintForEditing,
+  placeBlueprintOnActiveGraph,
+} from '@/hooks/useBlueprintEditorBridge';
 import type { Blueprint } from '@/models/blueprint';
 
 const gameData = loadGameData();
@@ -246,6 +249,16 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
           </div>
         </div>
         <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => {
+              const added = placeBlueprintOnActiveGraph(blueprint.id);
+              if (added) onClose();
+            }}
+            className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
+            title="Place on canvas"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={() => {
               openBlueprintForEditing(blueprint.id);

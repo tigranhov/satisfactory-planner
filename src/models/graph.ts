@@ -4,7 +4,7 @@ export type GraphId = string;
 export type NodeId = string;
 export type EdgeId = string;
 
-export type NodeKind = 'recipe' | 'composite' | 'input' | 'output';
+export type NodeKind = 'recipe' | 'composite' | 'input' | 'output' | 'blueprint';
 
 export interface RecipeNodeData {
   kind: 'recipe';
@@ -26,7 +26,19 @@ export interface InterfaceNodeData {
   label?: string;
 }
 
-export type NodeData = RecipeNodeData | CompositeNodeData | InterfaceNodeData;
+// `blueprintId` is a BlueprintId (defined in models/blueprint.ts) but kept as
+// a plain string here to avoid a graph.ts ↔ blueprint.ts import cycle.
+export interface BlueprintNodeData {
+  kind: 'blueprint';
+  blueprintId: string;
+  count: number;
+}
+
+export type NodeData =
+  | RecipeNodeData
+  | CompositeNodeData
+  | InterfaceNodeData
+  | BlueprintNodeData;
 
 export interface GraphNode {
   id: NodeId;
