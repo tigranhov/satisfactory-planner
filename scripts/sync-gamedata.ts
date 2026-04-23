@@ -21,6 +21,10 @@ import { execSync } from 'node:child_process';
 import { normalize, type SatisfactoryToolsData } from '../src/data/normalize';
 import type { GameData } from '../src/data/types';
 
+const ICON_DIR = path.resolve(__dirname, '../src/data/icons');
+const ICON_UPSTREAM_PATH = 'www/assets/images/items';
+const ICON_CONCURRENCY = 8;
+
 function parseArgs(argv: string[]): { local?: string; ref?: string } {
   const out: { local?: string; ref?: string } = {};
   for (let i = 0; i < argv.length; i++) {
@@ -96,6 +100,62 @@ function sanityCheckFluids(data: GameData) {
   }
 }
 
+function fetchIconBytes(basename: string): Buffer | null {
+  const cmd = `gh api repos/greeny/SatisfactoryTools/contents/${ICON_UPSTREAM_PATH}/${basename} -H "Accept: application/vnd.github.raw"`;
+  try {
+    // Pass `encoding: 'buffer'` so stdout stays binary-safe; `gh api` writes raw
+    // PNG bytes to stdout. Suppress stderr — 404s for items without icons are
+    // expected and we handle them via the null return.
+    return execSync(cmd, { maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    return null;
+  }
+}
+
+async function syncIcons(data: GameData): Promise<void> {
+  if (!fs.existsSync(ICON_DIR)) fs.mkdirSync(ICON_DIR, { recursive: true });
+
+  const needed = new Set<string>();
+  for (const it of Object.values(data.items)) if (it.icon) needed.add(it.icon);
+  for (const m of Object.values(data.machines)) if (m.icon) needed.add(m.icon);
+
+  const missing = [...needed].filter(
+    (basename) => !fs.existsSync(path.join(ICON_DIR, basename)),
+  );
+
+  if (missing.length === 0) {
+    console.log(`Icons: ${needed.size} referenced, all cached on disk.`);
+    return;
+  }
+
+  console.log(`Icons: ${needed.size} referenced, fetching ${missing.length} missing...`);
+  let fetched = 0;
+  let failed = 0;
+
+  // Simple N-worker pool over `gh api` calls. `gh` shells out per request so
+  // raising concurrency past ~8 bottlenecks on process spawning, not network.
+  const queue = [...missing];
+  const worker = async () => {
+    while (queue.length > 0) {
+      const basename = queue.shift();
+      if (!basename) return;
+      const bytes = fetchIconBytes(basename);
+      if (bytes) {
+        fs.writeFileSync(path.join(ICON_DIR, basename), bytes);
+        fetched++;
+      } else {
+        failed++;
+      }
+      if ((fetched + failed) % 25 === 0) {
+        console.log(`  ... ${fetched + failed}/${missing.length}`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: ICON_CONCURRENCY }, () => worker()));
+
+  console.log(`Icons: fetched ${fetched}, failed ${failed} (missing upstream).`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const { raw, ref } = resolveSource(args.local);
@@ -121,6 +181,8 @@ async function main() {
   const outPath = path.resolve(__dirname, '../src/data/gamedata.generated.json');
   fs.writeFileSync(outPath, stableStringify(data));
   console.log(`Wrote: ${outPath}`);
+
+  await syncIcons(data);
 }
 
 main().catch((err) => {

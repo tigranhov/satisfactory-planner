@@ -3,7 +3,7 @@
     "adaptive-control-unit": {
       "category": "parts",
       "form": "solid",
-      "icon": "AC",
+      "icon": "desc-spaceelevatorpart-5-c_64.png",
       "id": "adaptive-control-unit",
       "name": "Adaptive Control Unit",
       "sinkPoints": 86120,
@@ -12,7 +12,7 @@
     "ai-limiter": {
       "category": "parts",
       "form": "solid",
-      "icon": "AL",
+      "icon": "desc-circuitboardhighspeed-c_64.png",
       "id": "ai-limiter",
       "name": "AI Limiter",
       "sinkPoints": 920,
@@ -21,7 +21,7 @@
     "alclad-aluminum-sheet": {
       "category": "parts",
       "form": "solid",
-      "icon": "AA",
+      "icon": "desc-aluminumplate-c_64.png",
       "id": "alclad-aluminum-sheet",
       "name": "Alclad Aluminum Sheet",
       "sinkPoints": 266,
@@ -30,7 +30,7 @@
     "alien-dna-capsule": {
       "category": "parts",
       "form": "solid",
-      "icon": "AD",
+      "icon": "desc-aliendnacapsule-c_64.png",
       "id": "alien-dna-capsule",
       "name": "Alien DNA Capsule",
       "stackSize": 50
@@ -38,7 +38,7 @@
     "alien-protein": {
       "category": "parts",
       "form": "solid",
-      "icon": "AP",
+      "icon": "desc-alienprotein-c_64.png",
       "id": "alien-protein",
       "name": "Alien Protein",
       "stackSize": 100
@@ -46,7 +46,7 @@
     "alumina-solution": {
       "category": "fluids",
       "form": "fluid",
-      "icon": "AS",
+      "icon": "desc-aluminasolution-c_64.png",
       "id": "alumina-solution",
       "name": "Alumina Solution",
       "sinkPoints": 20000
@@ -54,7 +54,7 @@
     "aluminum-casing": {
       "category": "parts",
       "form": "solid",
-      "icon": "AC",
+      "icon": "desc-aluminumcasing-c_64.png",
       "id": "aluminum-casing",
       "name": "Aluminum Casing",
       "sinkPoints": 393,
@@ -63,7 +63,7 @@
     "aluminum-ingot": {
       "category": "parts",
       "form": "solid",
-      "icon": "AI",
+      "icon": "desc-aluminumingot-c_64.png",
       "id": "aluminum-ingot",
       "name": "Aluminum Ingot",
       "sinkPoints": 131,
@@ -72,7 +72,7 @@
     "aluminum-scrap": {
       "category": "parts",
       "form": "solid",
-      "icon": "AS",
+      "icon": "desc-aluminumscrap-c_64.png",
       "id": "aluminum-scrap",
       "name": "Aluminum Scrap",
       "sinkPoints": 27,
@@ -81,7 +81,7 @@
     "assembly-director-system": {
       "category": "parts",
       "form": "solid",
-      "icon": "AD",
+      "icon": "desc-spaceelevatorpart-7-c_64.png",
       "id": "assembly-director-system",
       "name": "Assembly Director System",
       "sinkPoints": 543632,
@@ -90,7 +90,7 @@
     "automated-wiring": {
       "category": "parts",
       "form": "solid",
-      "icon": "AW",
+      "icon": "desc-spaceelevatorpart-3-c_64.png",
       "id": "automated-wiring",
       "name": "Automated Wiring",
       "sinkPoints": 1440,
@@ -99,7 +99,7 @@
     "bacon-agaric": {
       "category": "parts",
       "form": "solid",
-      "icon": "BA",
+      "icon": "desc-shroom-c_64.png",
       "id": "bacon-agaric",
       "name": "Bacon Agaric",
       "stackSize": 50
@@ -108,7 +108,7 @@
       "category": "parts",
       "energyMJ": 6000,
       "form": "solid",
-      "icon": "BA",
+      "icon": "desc-battery-c_64.png",
       "id": "battery",
       "name": "Battery",
       "sinkPoints": 465,
@@ -117,7 +117,7 @@
     "bauxite": {
       "category": "ores",
       "form": "solid",
-      "icon": "BA",
+      "icon": "desc-orebauxite-c_64.png",
       "id": "bauxite",
       "name": "Bauxite",
       "sinkPoints": 8,
@@ -126,7 +126,7 @@
     "beacon": {
       "category": "parts",
       "form": "solid",
-      "icon": "BE",
+      "icon": "bp-equipmentdescriptorbeacon-c_64.png",
       "id": "beacon",
       "name": "Beacon",
       "sinkPoints": 320,
@@ -135,7 +135,7 @@
     "beryl-nut": {
       "category": "parts",
       "form": "solid",
-      "icon": "BN",
+      "icon": "desc-nut-c_64.png",
       "id": "beryl-nut",
       "name": "Beryl Nut",
       "stackSize": 100
@@ -144,7 +144,7 @@
       "category": "biomass",
       "energyMJ": 180,
       "form": "solid",
-      "icon": "BI",
+      "icon": "desc-genericbiomass-c_64.png",
       "id": "biomass",
       "name": "Biomass",
       "sinkPoints": 12,
@@ -153,7 +153,7 @@
     "black-powder": {
       "category": "parts",
       "form": "solid",
-      "icon": "BP",
+      "icon": "desc-gunpowder-c_64.png",
       "id": "black-powder",
       "name": "Black Powder",
       "sinkPoints": 14,
@@ -162,7 +162,7 @@
     "blade-runners": {
       "category": "parts",
       "form": "solid",
-      "icon": "BR",
+      "icon": "bp-equipmentdescriptorjumpingstilts-c_64.png",
       "id": "blade-runners",
       "name": "Blade Runners",
       "sinkPoints": 4088,
@@ -171,7 +171,7 @@
     "blue-power-slug": {
       "category": "parts",
       "form": "solid",
-      "icon": "BP",
+      "icon": "desc-crystal-c_64.png",
       "id": "blue-power-slug",
       "name": "Blue Power Slug",
       "stackSize": 50
@@ -179,7 +179,7 @@
     "cable": {
       "category": "parts",
       "form": "solid",
-      "icon": "CA",
+      "icon": "desc-cable-c_64.png",
       "id": "cable",
       "name": "Cable",
       "sinkPoints": 24,
@@ -188,7 +188,7 @@
     "caterium-ingot": {
       "category": "parts",
       "form": "solid",
-      "icon": "CI",
+      "icon": "desc-goldingot-c_64.png",
       "id": "caterium-ingot",
       "name": "Caterium Ingot",
       "sinkPoints": 42,
@@ -197,7 +197,7 @@
     "caterium-ore": {
       "category": "ores",
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-oregold-c_64.png",
       "id": "caterium-ore",
       "name": "Caterium Ore",
       "sinkPoints": 7,
@@ -206,7 +206,7 @@
     "chainsaw": {
       "category": "parts",
       "form": "solid",
-      "icon": "CH",
+      "icon": "desc-chainsaw-c_64.png",
       "id": "chainsaw",
       "name": "Chainsaw",
       "sinkPoints": 2760,
@@ -215,7 +215,7 @@
     "circuit-board": {
       "category": "parts",
       "form": "solid",
-      "icon": "CB",
+      "icon": "desc-circuitboard-c_64.png",
       "id": "circuit-board",
       "name": "Circuit Board",
       "sinkPoints": 696,
@@ -224,7 +224,7 @@
     "cluster-nobelisk": {
       "category": "parts",
       "form": "solid",
-      "icon": "CN",
+      "icon": "desc-nobeliskcluster-c_64.png",
       "id": "cluster-nobelisk",
       "name": "Cluster Nobelisk",
       "sinkPoints": 1376,
@@ -234,7 +234,7 @@
       "category": "ores",
       "energyMJ": 300,
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-coal-c_64.png",
       "id": "coal",
       "name": "Coal",
       "sinkPoints": 3,
@@ -244,7 +244,7 @@
       "category": "parts",
       "energyMJ": 900,
       "form": "solid",
-      "icon": "CC",
+      "icon": "desc-colorcartridge-c_64.png",
       "id": "color-cartridge",
       "name": "Color Cartridge",
       "sinkPoints": 10,
@@ -254,7 +254,7 @@
       "category": "fuels",
       "energyMJ": 630,
       "form": "solid",
-      "icon": "CC",
+      "icon": "desc-compactedcoal-c_64.png",
       "id": "compacted-coal",
       "name": "Compacted Coal",
       "sinkPoints": 28,
@@ -263,7 +263,7 @@
     "computer": {
       "category": "parts",
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-computer-c_64.png",
       "id": "computer",
       "name": "Computer",
       "sinkPoints": 17260,
@@ -272,7 +272,7 @@
     "concrete": {
       "category": "parts",
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-cement-c_64.png",
       "id": "concrete",
       "name": "Concrete",
       "sinkPoints": 12,
@@ -281,7 +281,7 @@
     "cooling-system": {
       "category": "parts",
       "form": "solid",
-      "icon": "CS",
+      "icon": "desc-coolingsystem-c_64.png",
       "id": "cooling-system",
       "name": "Cooling System",
       "sinkPoints": 12006,
@@ -290,7 +290,7 @@
     "copper-ingot": {
       "category": "parts",
       "form": "solid",
-      "icon": "CI",
+      "icon": "desc-copperingot-c_64.png",
       "id": "copper-ingot",
       "name": "Copper Ingot",
       "sinkPoints": 6,
@@ -299,7 +299,7 @@
     "copper-ore": {
       "category": "ores",
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-orecopper-c_64.png",
       "id": "copper-ore",
       "name": "Copper Ore",
       "sinkPoints": 3,
@@ -308,7 +308,7 @@
     "copper-powder": {
       "category": "parts",
       "form": "solid",
-      "icon": "CP",
+      "icon": "desc-copperdust-c_64.png",
       "id": "copper-powder",
       "name": "Copper Powder",
       "sinkPoints": 72,
@@ -317,7 +317,7 @@
     "copper-sheet": {
       "category": "parts",
       "form": "solid",
-      "icon": "CS",
+      "icon": "desc-coppersheet-c_64.png",
       "id": "copper-sheet",
       "name": "Copper Sheet",
       "sinkPoints": 24,
@@ -327,7 +327,7 @@
       "category": "ores",
       "energyMJ": 320,
       "form": "fluid",
-      "icon": "CO",
+      "icon": "desc-liquidoil-c_64.png",
       "id": "crude-oil",
       "name": "Crude Oil",
       "sinkPoints": 30000
@@ -335,7 +335,7 @@
     "crystal-oscillator": {
       "category": "parts",
       "form": "solid",
-      "icon": "CO",
+      "icon": "desc-crystaloscillator-c_64.png",
       "id": "crystal-oscillator",
       "name": "Crystal Oscillator",
       "sinkPoints": 3072,
@@ -344,7 +344,7 @@
     "electromagnetic-control-rod": {
       "category": "parts",
       "form": "solid",
-      "icon": "EC",
+      "icon": "desc-electromagneticcontrolrod-c_64.png",
       "id": "electromagnetic-control-rod",
       "name": "Electromagnetic Control Rod",
       "sinkPoints": 2560,
@@ -353,7 +353,7 @@
     "empty-canister": {
       "category": "parts",
       "form": "solid",
-      "icon": "EC",
+      "icon": "desc-fluidcanister-c_64.png",
       "id": "empty-canister",
       "name": "Empty Canister",
       "sinkPoints": 60,
@@ -362,7 +362,7 @@
     "empty-fluid-tank": {
       "category": "parts",
       "form": "solid",
-      "icon": "EF",
+      "icon": "desc-gastank-c_64.png",
       "id": "empty-fluid-tank",
       "name": "Empty Fluid Tank",
       "sinkPoints": 225,
@@ -371,7 +371,7 @@
     "encased-industrial-beam": {
       "category": "parts",
       "form": "solid",
-      "icon": "EI",
+      "icon": "desc-steelplatereinforced-c_64.png",
       "id": "encased-industrial-beam",
       "name": "Encased Industrial Beam",
       "sinkPoints": 632,
@@ -380,7 +380,7 @@
     "encased-plutonium-cell": {
       "category": "parts",
       "form": "solid",
-      "icon": "EP",
+      "icon": "desc-plutoniumcell-c_64.png",
       "id": "encased-plutonium-cell",
       "name": "Encased Plutonium Cell",
       "stackSize": 200
@@ -388,7 +388,7 @@
     "encased-uranium-cell": {
       "category": "parts",
       "form": "solid",
-      "icon": "EU",
+      "icon": "desc-uraniumcell-c_64.png",
       "id": "encased-uranium-cell",
       "name": "Encased Uranium Cell",
       "sinkPoints": 147,
@@ -397,7 +397,7 @@
     "explosive-rebar": {
       "category": "parts",
       "form": "solid",
-      "icon": "ER",
+      "icon": "desc-rebar-explosive-c_64.png",
       "id": "explosive-rebar",
       "name": "Explosive Rebar",
       "sinkPoints": 360,
@@ -407,7 +407,7 @@
       "category": "biomass",
       "energyMJ": 15,
       "form": "solid",
-      "icon": "FA",
+      "icon": "desc-fabric-c_64.png",
       "id": "fabric",
       "name": "Fabric",
       "sinkPoints": 140,
@@ -416,7 +416,7 @@
     "factory-carttm": {
       "category": "parts",
       "form": "solid",
-      "icon": "FC",
+      "icon": "desc-golfcart-c_64.png",
       "id": "factory-carttm",
       "name": "Factory Cart™",
       "sinkPoints": 1552,
@@ -426,7 +426,7 @@
       "category": "biomass",
       "energyMJ": 100,
       "form": "solid",
-      "icon": "FP",
+      "icon": "desc-flowerpetals-c_64.png",
       "id": "flower-petals",
       "name": "Flower Petals",
       "sinkPoints": 10,
@@ -436,7 +436,7 @@
       "category": "fluids",
       "energyMJ": 750,
       "form": "fluid",
-      "icon": "FU",
+      "icon": "desc-liquidfuel-c_64.png",
       "id": "fuel",
       "name": "Fuel",
       "sinkPoints": 75000
@@ -444,7 +444,7 @@
     "fused-modular-frame": {
       "category": "parts",
       "form": "solid",
-      "icon": "FM",
+      "icon": "desc-modularframefused-c_64.png",
       "id": "fused-modular-frame",
       "name": "Fused Modular Frame",
       "sinkPoints": 62840,
@@ -453,7 +453,7 @@
     "gas-filter": {
       "category": "parts",
       "form": "solid",
-      "icon": "GF",
+      "icon": "desc-filter-c_64.png",
       "id": "gas-filter",
       "name": "Gas Filter",
       "sinkPoints": 830,
@@ -462,7 +462,7 @@
     "gas-mask": {
       "category": "parts",
       "form": "solid",
-      "icon": "GM",
+      "icon": "bp-equipmentdescriptorgasmask-c_64.png",
       "id": "gas-mask",
       "name": "Gas Mask",
       "sinkPoints": 55000,
@@ -471,7 +471,7 @@
     "gas-nobelisk": {
       "category": "parts",
       "form": "solid",
-      "icon": "GN",
+      "icon": "desc-nobeliskgas-c_64.png",
       "id": "gas-nobelisk",
       "name": "Gas Nobelisk",
       "sinkPoints": 544,
@@ -480,7 +480,7 @@
     "golden-factory-carttm": {
       "category": "parts",
       "form": "solid",
-      "icon": "GF",
+      "icon": "desc-golfcartgold-c_64.png",
       "id": "golden-factory-carttm",
       "name": "Golden Factory Cart™",
       "sinkPoints": 1852,
@@ -490,7 +490,7 @@
       "category": "biomass",
       "energyMJ": 250,
       "form": "solid",
-      "icon": "HR",
+      "icon": "desc-hatcherparts-c_64.png",
       "id": "hatcher-remains",
       "name": "Hatcher Remains",
       "stackSize": 50
@@ -498,7 +498,7 @@
     "hazmat-suit": {
       "category": "parts",
       "form": "solid",
-      "icon": "HS",
+      "icon": "bp-equipmentdescriptorhazmatsuit-c_64.png",
       "id": "hazmat-suit",
       "name": "Hazmat Suit",
       "sinkPoints": 54100,
@@ -507,7 +507,7 @@
     "heat-sink": {
       "category": "parts",
       "form": "solid",
-      "icon": "HS",
+      "icon": "desc-aluminumplatereinforced-c_64.png",
       "id": "heat-sink",
       "name": "Heat Sink",
       "sinkPoints": 2804,
@@ -516,7 +516,7 @@
     "heavy-modular-frame": {
       "category": "parts",
       "form": "solid",
-      "icon": "HM",
+      "icon": "desc-modularframeheavy-c_64.png",
       "id": "heavy-modular-frame",
       "name": "Heavy Modular Frame",
       "sinkPoints": 11520,
@@ -526,7 +526,7 @@
       "category": "fluids",
       "energyMJ": 400,
       "form": "fluid",
-      "icon": "HO",
+      "icon": "desc-heavyoilresidue-c_64.png",
       "id": "heavy-oil-residue",
       "name": "Heavy Oil Residue",
       "sinkPoints": 30000
@@ -534,7 +534,7 @@
     "high-speed-connector": {
       "category": "parts",
       "form": "solid",
-      "icon": "HS",
+      "icon": "desc-highspeedconnector-c_64.png",
       "id": "high-speed-connector",
       "name": "High-Speed Connector",
       "sinkPoints": 3776,
@@ -544,7 +544,7 @@
       "category": "biomass",
       "energyMJ": 250,
       "form": "solid",
-      "icon": "HR",
+      "icon": "desc-hogparts-c_64.png",
       "id": "hog-remains",
       "name": "Hog Remains",
       "stackSize": 50
@@ -552,7 +552,7 @@
     "homing-rifle-ammo": {
       "category": "parts",
       "form": "solid",
-      "icon": "HR",
+      "icon": "desc-cartridgesmartprojectile-c_64.png",
       "id": "homing-rifle-ammo",
       "name": "Homing Rifle Ammo",
       "sinkPoints": 855,
@@ -561,7 +561,7 @@
     "hover-pack": {
       "category": "parts",
       "form": "solid",
-      "icon": "HP",
+      "icon": "bp-equipmentdescriptorhoverpack-c_64.png",
       "id": "hover-pack",
       "name": "Hover Pack",
       "sinkPoints": 413920,
@@ -570,7 +570,7 @@
     "hub-parts": {
       "category": "parts",
       "form": "solid",
-      "icon": "HP",
+      "icon": "desc-hubparts-c_64.png",
       "id": "hub-parts",
       "name": "HUB Parts",
       "stackSize": 1
@@ -578,7 +578,7 @@
     "iodine-infused-filter": {
       "category": "parts",
       "form": "solid",
-      "icon": "II",
+      "icon": "desc-hazmatfilter-c_64.png",
       "id": "iodine-infused-filter",
       "name": "Iodine Infused Filter",
       "sinkPoints": 2718,
@@ -587,7 +587,7 @@
     "iron-ingot": {
       "category": "parts",
       "form": "solid",
-      "icon": "II",
+      "icon": "desc-ironingot-c_64.png",
       "id": "iron-ingot",
       "name": "Iron Ingot",
       "sinkPoints": 2,
@@ -596,7 +596,7 @@
     "iron-ore": {
       "category": "ores",
       "form": "solid",
-      "icon": "IO",
+      "icon": "desc-oreiron-c_64.png",
       "id": "iron-ore",
       "name": "Iron Ore",
       "sinkPoints": 1,
@@ -605,7 +605,7 @@
     "iron-plate": {
       "category": "parts",
       "form": "solid",
-      "icon": "IP",
+      "icon": "desc-ironplate-c_64.png",
       "id": "iron-plate",
       "name": "Iron Plate",
       "sinkPoints": 6,
@@ -614,7 +614,7 @@
     "iron-rebar": {
       "category": "parts",
       "form": "solid",
-      "icon": "IR",
+      "icon": "desc-spikedrebar-c_64.png",
       "id": "iron-rebar",
       "name": "Iron Rebar",
       "sinkPoints": 8,
@@ -623,7 +623,7 @@
     "iron-rod": {
       "category": "parts",
       "form": "solid",
-      "icon": "IR",
+      "icon": "desc-ironrod-c_64.png",
       "id": "iron-rod",
       "name": "Iron Rod",
       "sinkPoints": 4,
@@ -632,7 +632,7 @@
     "jetpack": {
       "category": "parts",
       "form": "solid",
-      "icon": "JE",
+      "icon": "bp-equipmentdescriptorjetpack-c_64.png",
       "id": "jetpack",
       "name": "Jetpack",
       "sinkPoints": 49580,
@@ -642,7 +642,7 @@
       "category": "biomass",
       "energyMJ": 15,
       "form": "solid",
-      "icon": "LE",
+      "icon": "desc-leaves-c_64.png",
       "id": "leaves",
       "name": "Leaves",
       "sinkPoints": 3,
@@ -651,7 +651,7 @@
     "limestone": {
       "category": "ores",
       "form": "solid",
-      "icon": "LI",
+      "icon": "desc-stone-c_64.png",
       "id": "limestone",
       "name": "Limestone",
       "sinkPoints": 2,
@@ -661,7 +661,7 @@
       "category": "fluids",
       "energyMJ": 750,
       "form": "fluid",
-      "icon": "LB",
+      "icon": "desc-liquidbiofuel-c_64.png",
       "id": "liquid-biofuel",
       "name": "Liquid Biofuel",
       "sinkPoints": 261000
@@ -669,7 +669,7 @@
     "magnetic-field-generator": {
       "category": "parts",
       "form": "solid",
-      "icon": "MF",
+      "icon": "desc-spaceelevatorpart-6-c_64.png",
       "id": "magnetic-field-generator",
       "name": "Magnetic Field Generator",
       "sinkPoints": 15650,
@@ -678,7 +678,7 @@
     "medicinal-inhaler": {
       "category": "parts",
       "form": "solid",
-      "icon": "MI",
+      "icon": "desc-medkit-c_64.png",
       "id": "medicinal-inhaler",
       "name": "Medicinal Inhaler",
       "sinkPoints": 125,
@@ -687,7 +687,7 @@
     "modular-engine": {
       "category": "parts",
       "form": "solid",
-      "icon": "ME",
+      "icon": "desc-spaceelevatorpart-4-c_64.png",
       "id": "modular-engine",
       "name": "Modular Engine",
       "sinkPoints": 9960,
@@ -696,7 +696,7 @@
     "modular-frame": {
       "category": "parts",
       "form": "solid",
-      "icon": "MF",
+      "icon": "desc-modularframe-c_64.png",
       "id": "modular-frame",
       "name": "Modular Frame",
       "sinkPoints": 408,
@@ -705,7 +705,7 @@
     "motor": {
       "category": "parts",
       "form": "solid",
-      "icon": "MO",
+      "icon": "desc-motor-c_64.png",
       "id": "motor",
       "name": "Motor",
       "sinkPoints": 1520,
@@ -715,7 +715,7 @@
       "category": "biomass",
       "energyMJ": 20,
       "form": "solid",
-      "icon": "MY",
+      "icon": "desc-mycelia-c_64.png",
       "id": "mycelia",
       "name": "Mycelia",
       "sinkPoints": 10,
@@ -724,7 +724,7 @@
     "nitric-acid": {
       "category": "fluids",
       "form": "fluid",
-      "icon": "NA",
+      "icon": "desc-nitricacid-c_64.png",
       "id": "nitric-acid",
       "name": "Nitric Acid",
       "sinkPoints": 94000
@@ -732,7 +732,7 @@
     "nitrogen-gas": {
       "category": "ores",
       "form": "gas",
-      "icon": "NG",
+      "icon": "desc-nitrogengas-c_64.png",
       "id": "nitrogen-gas",
       "name": "Nitrogen Gas",
       "sinkPoints": 10000
@@ -740,7 +740,7 @@
     "nobelisk": {
       "category": "parts",
       "form": "solid",
-      "icon": "NO",
+      "icon": "desc-nobeliskexplosive-c_64.png",
       "id": "nobelisk",
       "name": "Nobelisk",
       "sinkPoints": 152,
@@ -749,7 +749,7 @@
     "nobelisk-detonator": {
       "category": "parts",
       "form": "solid",
-      "icon": "ND",
+      "icon": "bp-equipmentdescriptornobeliskdetonator-c_64.png",
       "id": "nobelisk-detonator",
       "name": "Nobelisk Detonator",
       "sinkPoints": 6480,
@@ -758,7 +758,7 @@
     "non-fissile-uranium": {
       "category": "parts",
       "form": "solid",
-      "icon": "NF",
+      "icon": "desc-nonfissibleuranium-c_64.png",
       "id": "non-fissile-uranium",
       "name": "Non-fissile Uranium",
       "stackSize": 500
@@ -766,7 +766,7 @@
     "nuclear-pasta": {
       "category": "parts",
       "form": "solid",
-      "icon": "NP",
+      "icon": "desc-spaceelevatorpart-9-c_64.png",
       "id": "nuclear-pasta",
       "name": "Nuclear Pasta",
       "sinkPoints": 543424,
@@ -775,7 +775,7 @@
     "nuke-nobelisk": {
       "category": "parts",
       "form": "solid",
-      "icon": "NN",
+      "icon": "desc-nobelisknuke-c_64.png",
       "id": "nuke-nobelisk",
       "name": "Nuke Nobelisk",
       "sinkPoints": 19600,
@@ -784,7 +784,7 @@
     "object-scanner": {
       "category": "parts",
       "form": "solid",
-      "icon": "OS",
+      "icon": "bp-equipmentdescriptorobjectscanner-c_64.png",
       "id": "object-scanner",
       "name": "Object Scanner",
       "sinkPoints": 1400,
@@ -793,7 +793,7 @@
     "packaged-alumina-solution": {
       "category": "parts",
       "form": "solid",
-      "icon": "PA",
+      "icon": "desc-packagedalumina-c_64.png",
       "id": "packaged-alumina-solution",
       "name": "Packaged Alumina Solution",
       "sinkPoints": 160,
@@ -803,7 +803,7 @@
       "category": "parts",
       "energyMJ": 750,
       "form": "solid",
-      "icon": "PF",
+      "icon": "desc-fuel-c_64.png",
       "id": "packaged-fuel",
       "name": "Packaged Fuel",
       "sinkPoints": 270,
@@ -813,7 +813,7 @@
       "category": "parts",
       "energyMJ": 400,
       "form": "solid",
-      "icon": "PH",
+      "icon": "desc-packagedoilresidue-c_64.png",
       "id": "packaged-heavy-oil-residue",
       "name": "Packaged Heavy Oil Residue",
       "sinkPoints": 180,
@@ -823,7 +823,7 @@
       "category": "biomass",
       "energyMJ": 750,
       "form": "solid",
-      "icon": "PL",
+      "icon": "desc-packagedbiofuel-c_64.png",
       "id": "packaged-liquid-biofuel",
       "name": "Packaged Liquid Biofuel",
       "sinkPoints": 370,
@@ -832,7 +832,7 @@
     "packaged-nitric-acid": {
       "category": "parts",
       "form": "solid",
-      "icon": "PN",
+      "icon": "desc-packagednitricacid-c_64.png",
       "id": "packaged-nitric-acid",
       "name": "Packaged Nitric Acid",
       "sinkPoints": 412,
@@ -841,7 +841,7 @@
     "packaged-nitrogen-gas": {
       "category": "parts",
       "form": "solid",
-      "icon": "PN",
+      "icon": "desc-packagednitrogengas-c_64.png",
       "id": "packaged-nitrogen-gas",
       "name": "Packaged Nitrogen Gas",
       "sinkPoints": 312,
@@ -851,7 +851,7 @@
       "category": "parts",
       "energyMJ": 320,
       "form": "solid",
-      "icon": "PO",
+      "icon": "desc-packagedoil-c_64.png",
       "id": "packaged-oil",
       "name": "Packaged Oil",
       "sinkPoints": 180,
@@ -860,7 +860,7 @@
     "packaged-sulfuric-acid": {
       "category": "parts",
       "form": "solid",
-      "icon": "PS",
+      "icon": "desc-packagedsulfuricacid-c_64.png",
       "id": "packaged-sulfuric-acid",
       "name": "Packaged Sulfuric Acid",
       "sinkPoints": 152,
@@ -870,7 +870,7 @@
       "category": "parts",
       "energyMJ": 2000,
       "form": "solid",
-      "icon": "PT",
+      "icon": "desc-turbofuel-c_64.png",
       "id": "packaged-turbofuel",
       "name": "Packaged Turbofuel",
       "sinkPoints": 570,
@@ -879,7 +879,7 @@
     "packaged-water": {
       "category": "parts",
       "form": "solid",
-      "icon": "PW",
+      "icon": "desc-packagedwater-c_64.png",
       "id": "packaged-water",
       "name": "Packaged Water",
       "sinkPoints": 130,
@@ -888,7 +888,7 @@
     "paleberry": {
       "category": "parts",
       "form": "solid",
-      "icon": "PA",
+      "icon": "desc-berry-c_64.png",
       "id": "paleberry",
       "name": "Paleberry",
       "stackSize": 50
@@ -896,7 +896,7 @@
     "parachute": {
       "category": "parts",
       "form": "solid",
-      "icon": "PA",
+      "icon": "desc-parachute-c_64.png",
       "id": "parachute",
       "name": "Parachute",
       "sinkPoints": 608,
@@ -906,7 +906,7 @@
       "category": "fuels",
       "energyMJ": 180,
       "form": "solid",
-      "icon": "PC",
+      "icon": "desc-petroleumcoke-c_64.png",
       "id": "petroleum-coke",
       "name": "Petroleum Coke",
       "sinkPoints": 20,
@@ -916,7 +916,7 @@
       "category": "biomass",
       "energyMJ": 250,
       "form": "solid",
-      "icon": "PS",
+      "icon": "desc-spitterparts-c_64.png",
       "id": "plasma-spitter-remains",
       "name": "Plasma Spitter Remains",
       "stackSize": 50
@@ -924,7 +924,7 @@
     "plastic": {
       "category": "parts",
       "form": "solid",
-      "icon": "PL",
+      "icon": "desc-plastic-c_64.png",
       "id": "plastic",
       "name": "Plastic",
       "sinkPoints": 75,
@@ -934,7 +934,7 @@
       "category": "fuels",
       "energyMJ": 1500000,
       "form": "solid",
-      "icon": "PF",
+      "icon": "desc-plutoniumfuelrod-c_64.png",
       "id": "plutonium-fuel-rod",
       "name": "Plutonium Fuel Rod",
       "sinkPoints": 153184,
@@ -943,7 +943,7 @@
     "plutonium-pellet": {
       "category": "parts",
       "form": "solid",
-      "icon": "PP",
+      "icon": "desc-plutoniumpellet-c_64.png",
       "id": "plutonium-pellet",
       "name": "Plutonium Pellet",
       "stackSize": 100
@@ -951,7 +951,7 @@
     "plutonium-waste": {
       "category": "parts",
       "form": "solid",
-      "icon": "PW",
+      "icon": "desc-plutoniumwaste-c_64.png",
       "id": "plutonium-waste",
       "name": "Plutonium Waste",
       "stackSize": 500
@@ -959,7 +959,7 @@
     "polymer-resin": {
       "category": "parts",
       "form": "solid",
-      "icon": "PR",
+      "icon": "desc-polymerresin-c_64.png",
       "id": "polymer-resin",
       "name": "Polymer Resin",
       "sinkPoints": 12,
@@ -968,7 +968,7 @@
     "portable-miner": {
       "category": "parts",
       "form": "solid",
-      "icon": "PM",
+      "icon": "bp-itemdescriptorportableminer-c_64.png",
       "id": "portable-miner",
       "name": "Portable Miner",
       "sinkPoints": 56,
@@ -977,7 +977,7 @@
     "power-shard": {
       "category": "parts",
       "form": "solid",
-      "icon": "PS",
+      "icon": "desc-crystalshard-c_64.png",
       "id": "power-shard",
       "name": "Power Shard",
       "stackSize": 100
@@ -985,7 +985,7 @@
     "pressure-conversion-cube": {
       "category": "parts",
       "form": "solid",
-      "icon": "PC",
+      "icon": "desc-pressureconversioncube-c_64.png",
       "id": "pressure-conversion-cube",
       "name": "Pressure Conversion Cube",
       "sinkPoints": 257312,
@@ -994,7 +994,7 @@
     "pulse-nobelisk": {
       "category": "parts",
       "form": "solid",
-      "icon": "PN",
+      "icon": "desc-nobeliskshockwave-c_64.png",
       "id": "pulse-nobelisk",
       "name": "Pulse Nobelisk",
       "sinkPoints": 1533,
@@ -1003,7 +1003,7 @@
     "purple-power-slug": {
       "category": "parts",
       "form": "solid",
-      "icon": "PP",
+      "icon": "desc-crystal-mk3-c_64.png",
       "id": "purple-power-slug",
       "name": "Purple Power Slug",
       "stackSize": 50
@@ -1011,7 +1011,7 @@
     "quartz-crystal": {
       "category": "parts",
       "form": "solid",
-      "icon": "QC",
+      "icon": "desc-quartzcrystal-c_64.png",
       "id": "quartz-crystal",
       "name": "Quartz Crystal",
       "sinkPoints": 50,
@@ -1020,7 +1020,7 @@
     "quickwire": {
       "category": "parts",
       "form": "solid",
-      "icon": "QU",
+      "icon": "desc-highspeedwire-c_64.png",
       "id": "quickwire",
       "name": "Quickwire",
       "sinkPoints": 17,
@@ -1029,7 +1029,7 @@
     "radio-control-unit": {
       "category": "parts",
       "form": "solid",
-      "icon": "RC",
+      "icon": "desc-modularframelightweight-c_64.png",
       "id": "radio-control-unit",
       "name": "Radio Control Unit",
       "sinkPoints": 19600,
@@ -1038,7 +1038,7 @@
     "raw-quartz": {
       "category": "ores",
       "form": "solid",
-      "icon": "RQ",
+      "icon": "desc-rawquartz-c_64.png",
       "id": "raw-quartz",
       "name": "Raw Quartz",
       "sinkPoints": 15,
@@ -1047,7 +1047,7 @@
     "rebar-gun": {
       "category": "parts",
       "form": "solid",
-      "icon": "RG",
+      "icon": "desc-rebargunprojectile-c_64.png",
       "id": "rebar-gun",
       "name": "Rebar Gun",
       "sinkPoints": 1968,
@@ -1056,7 +1056,7 @@
     "reinforced-iron-plate": {
       "category": "parts",
       "form": "solid",
-      "icon": "RI",
+      "icon": "desc-ironplatereinforced-c_64.png",
       "id": "reinforced-iron-plate",
       "name": "Reinforced Iron Plate",
       "sinkPoints": 120,
@@ -1065,7 +1065,7 @@
     "rifle": {
       "category": "parts",
       "form": "solid",
-      "icon": "RI",
+      "icon": "bp-equipmentdescriptorrifle-c_64.png",
       "id": "rifle",
       "name": "Rifle",
       "sinkPoints": 9480,
@@ -1074,7 +1074,7 @@
     "rifle-ammo": {
       "category": "parts",
       "form": "solid",
-      "icon": "RA",
+      "icon": "desc-cartridgestandard-c_64.png",
       "id": "rifle-ammo",
       "name": "Rifle Ammo",
       "sinkPoints": 25,
@@ -1083,7 +1083,7 @@
     "rotor": {
       "category": "parts",
       "form": "solid",
-      "icon": "RO",
+      "icon": "desc-rotor-c_64.png",
       "id": "rotor",
       "name": "Rotor",
       "sinkPoints": 140,
@@ -1092,7 +1092,7 @@
     "rubber": {
       "category": "parts",
       "form": "solid",
-      "icon": "RU",
+      "icon": "desc-rubber-c_64.png",
       "id": "rubber",
       "name": "Rubber",
       "sinkPoints": 60,
@@ -1101,7 +1101,7 @@
     "screw": {
       "category": "parts",
       "form": "solid",
-      "icon": "SC",
+      "icon": "desc-ironscrew-c_64.png",
       "id": "screw",
       "name": "Screw",
       "sinkPoints": 2,
@@ -1110,7 +1110,7 @@
     "shatter-rebar": {
       "category": "parts",
       "form": "solid",
-      "icon": "SR",
+      "icon": "desc-rebar-spreadshot-c_64.png",
       "id": "shatter-rebar",
       "name": "Shatter Rebar",
       "sinkPoints": 332,
@@ -1119,7 +1119,7 @@
     "silica": {
       "category": "parts",
       "form": "solid",
-      "icon": "SI",
+      "icon": "desc-silica-c_64.png",
       "id": "silica",
       "name": "Silica",
       "sinkPoints": 20,
@@ -1128,7 +1128,7 @@
     "smart-plating": {
       "category": "parts",
       "form": "solid",
-      "icon": "SP",
+      "icon": "desc-spaceelevatorpart-1-c_64.png",
       "id": "smart-plating",
       "name": "Smart Plating",
       "sinkPoints": 520,
@@ -1137,7 +1137,7 @@
     "smokeless-powder": {
       "category": "parts",
       "form": "solid",
-      "icon": "SP",
+      "icon": "desc-gunpowdermk2-c_64.png",
       "id": "smokeless-powder",
       "name": "Smokeless Powder",
       "sinkPoints": 58,
@@ -1147,7 +1147,7 @@
       "category": "biomass",
       "energyMJ": 450,
       "form": "solid",
-      "icon": "SB",
+      "icon": "desc-biofuel-c_64.png",
       "id": "solid-biofuel",
       "name": "Solid Biofuel",
       "sinkPoints": 48,
@@ -1156,7 +1156,7 @@
     "stator": {
       "category": "parts",
       "form": "solid",
-      "icon": "ST",
+      "icon": "desc-stator-c_64.png",
       "id": "stator",
       "name": "Stator",
       "sinkPoints": 240,
@@ -1165,7 +1165,7 @@
     "steel-beam": {
       "category": "parts",
       "form": "solid",
-      "icon": "SB",
+      "icon": "desc-steelplate-c_64.png",
       "id": "steel-beam",
       "name": "Steel Beam",
       "sinkPoints": 64,
@@ -1174,7 +1174,7 @@
     "steel-ingot": {
       "category": "parts",
       "form": "solid",
-      "icon": "SI",
+      "icon": "desc-steelingot-c_64.png",
       "id": "steel-ingot",
       "name": "Steel Ingot",
       "sinkPoints": 8,
@@ -1183,7 +1183,7 @@
     "steel-pipe": {
       "category": "parts",
       "form": "solid",
-      "icon": "SP",
+      "icon": "desc-steelpipe-c_64.png",
       "id": "steel-pipe",
       "name": "Steel Pipe",
       "sinkPoints": 24,
@@ -1193,7 +1193,7 @@
       "category": "biomass",
       "energyMJ": 250,
       "form": "solid",
-      "icon": "SR",
+      "icon": "desc-stingerparts-c_64.png",
       "id": "stinger-remains",
       "name": "Stinger Remains",
       "stackSize": 50
@@ -1201,7 +1201,7 @@
     "stun-rebar": {
       "category": "parts",
       "form": "solid",
-      "icon": "SR",
+      "icon": "desc-rebar-stunshot-c_64.png",
       "id": "stun-rebar",
       "name": "Stun Rebar",
       "sinkPoints": 186,
@@ -1210,7 +1210,7 @@
     "sulfur": {
       "category": "ores",
       "form": "solid",
-      "icon": "SU",
+      "icon": "desc-sulfur-c_64.png",
       "id": "sulfur",
       "name": "Sulfur",
       "sinkPoints": 11,
@@ -1219,7 +1219,7 @@
     "sulfuric-acid": {
       "category": "fluids",
       "form": "fluid",
-      "icon": "SA",
+      "icon": "desc-sulfuricacid-c_64.png",
       "id": "sulfuric-acid",
       "name": "Sulfuric Acid",
       "sinkPoints": 16000
@@ -1227,7 +1227,7 @@
     "supercomputer": {
       "category": "parts",
       "form": "solid",
-      "icon": "SU",
+      "icon": "desc-computersuper-c_64.png",
       "id": "supercomputer",
       "name": "Supercomputer",
       "sinkPoints": 99576,
@@ -1236,7 +1236,7 @@
     "thermal-propulsion-rocket": {
       "category": "parts",
       "form": "solid",
-      "icon": "TP",
+      "icon": "desc-spaceelevatorpart-8-c_64.png",
       "id": "thermal-propulsion-rocket",
       "name": "Thermal Propulsion Rocket",
       "sinkPoints": 732956,
@@ -1245,7 +1245,7 @@
     "turbo-motor": {
       "category": "parts",
       "form": "solid",
-      "icon": "TM",
+      "icon": "desc-motorlightweight-c_64.png",
       "id": "turbo-motor",
       "name": "Turbo Motor",
       "sinkPoints": 242720,
@@ -1254,7 +1254,7 @@
     "turbo-rifle-ammo": {
       "category": "parts",
       "form": "solid",
-      "icon": "TR",
+      "icon": "desc-cartridgechaos-c_64.png",
       "id": "turbo-rifle-ammo",
       "name": "Turbo Rifle Ammo",
       "sinkPoints": 120,
@@ -1264,7 +1264,7 @@
       "category": "fluids",
       "energyMJ": 2000,
       "form": "fluid",
-      "icon": "TU",
+      "icon": "desc-liquidturbofuel-c_64.png",
       "id": "turbofuel",
       "name": "Turbofuel",
       "sinkPoints": 225000
@@ -1272,7 +1272,7 @@
     "uranium": {
       "category": "ores",
       "form": "solid",
-      "icon": "UR",
+      "icon": "desc-oreuranium-c_64.png",
       "id": "uranium",
       "name": "Uranium",
       "sinkPoints": 35,
@@ -1282,7 +1282,7 @@
       "category": "fuels",
       "energyMJ": 750000,
       "form": "solid",
-      "icon": "UF",
+      "icon": "desc-nuclearfuelrod-c_64.png",
       "id": "uranium-fuel-rod",
       "name": "Uranium Fuel Rod",
       "sinkPoints": 44092,
@@ -1291,7 +1291,7 @@
     "uranium-waste": {
       "category": "parts",
       "form": "solid",
-      "icon": "UW",
+      "icon": "desc-nuclearwaste-c_64.png",
       "id": "uranium-waste",
       "name": "Uranium Waste",
       "stackSize": 500
@@ -1299,7 +1299,7 @@
     "versatile-framework": {
       "category": "parts",
       "form": "solid",
-      "icon": "VF",
+      "icon": "desc-spaceelevatorpart-2-c_64.png",
       "id": "versatile-framework",
       "name": "Versatile Framework",
       "sinkPoints": 1176,
@@ -1308,7 +1308,7 @@
     "water": {
       "category": "ores",
       "form": "fluid",
-      "icon": "WA",
+      "icon": "desc-water-c_64.png",
       "id": "water",
       "name": "Water",
       "sinkPoints": 5000
@@ -1316,7 +1316,7 @@
     "wire": {
       "category": "parts",
       "form": "solid",
-      "icon": "WI",
+      "icon": "desc-wire-c_64.png",
       "id": "wire",
       "name": "Wire",
       "sinkPoints": 6,
@@ -1326,7 +1326,7 @@
       "category": "biomass",
       "energyMJ": 100,
       "form": "solid",
-      "icon": "WO",
+      "icon": "desc-wood-c_64.png",
       "id": "wood",
       "name": "Wood",
       "sinkPoints": 30,
@@ -1335,7 +1335,7 @@
     "xeno-basher": {
       "category": "parts",
       "form": "solid",
-      "icon": "XB",
+      "icon": "bp-equipmentdescriptorstunspear-c_64.png",
       "id": "xeno-basher",
       "name": "Xeno-Basher",
       "sinkPoints": 18800,
@@ -1344,7 +1344,7 @@
     "xeno-zapper": {
       "category": "parts",
       "form": "solid",
-      "icon": "XZ",
+      "icon": "bp-equipmentdescriptorshockshank-c_64.png",
       "id": "xeno-zapper",
       "name": "Xeno-Zapper",
       "sinkPoints": 1880,
@@ -1353,7 +1353,7 @@
     "yellow-power-slug": {
       "category": "parts",
       "form": "solid",
-      "icon": "YP",
+      "icon": "desc-crystal-mk2-c_64.png",
       "id": "yellow-power-slug",
       "name": "Yellow Power Slug",
       "stackSize": 50
@@ -1361,7 +1361,7 @@
     "zipline": {
       "category": "parts",
       "form": "solid",
-      "icon": "ZI",
+      "icon": "bp-eqdesczipline-c_64.png",
       "id": "zipline",
       "name": "Zipline",
       "sinkPoints": 5284,
@@ -1371,7 +1371,7 @@
   "machines": {
     "assembler": {
       "category": "manufacturer",
-      "icon": "AS",
+      "icon": "desc-assemblermk1-c_64.png",
       "id": "assembler",
       "isVariablePower": true,
       "name": "Assembler",
@@ -1381,7 +1381,7 @@
     },
     "biomass-burner": {
       "category": "generator",
-      "icon": "BB",
+      "icon": "desc-generatorbiomass-c_64.png",
       "id": "biomass-burner",
       "name": "Biomass Burner",
       "powerMW": 30,
@@ -1391,7 +1391,7 @@
     },
     "blender": {
       "category": "manufacturer",
-      "icon": "BL",
+      "icon": "desc-blender-c_64.png",
       "id": "blender",
       "isVariablePower": true,
       "name": "Blender",
@@ -1401,7 +1401,7 @@
     },
     "coal-generator": {
       "category": "generator",
-      "icon": "CG",
+      "icon": "desc-generatorcoal-c_64.png",
       "id": "coal-generator",
       "name": "Coal Generator",
       "powerMW": 75,
@@ -1411,7 +1411,7 @@
     },
     "constructor": {
       "category": "manufacturer",
-      "icon": "CO",
+      "icon": "desc-constructormk1-c_64.png",
       "id": "constructor",
       "isVariablePower": true,
       "name": "Constructor",
@@ -1421,7 +1421,7 @@
     },
     "foundry": {
       "category": "manufacturer",
-      "icon": "FO",
+      "icon": "desc-foundrymk1-c_64.png",
       "id": "foundry",
       "isVariablePower": true,
       "name": "Foundry",
@@ -1431,7 +1431,7 @@
     },
     "fuel-generator": {
       "category": "generator",
-      "icon": "FG",
+      "icon": "desc-generatorfuel-c_64.png",
       "id": "fuel-generator",
       "name": "Fuel Generator",
       "powerMW": 150,
@@ -1441,7 +1441,7 @@
     },
     "manufacturer": {
       "category": "manufacturer",
-      "icon": "MA",
+      "icon": "desc-manufacturermk1-c_64.png",
       "id": "manufacturer",
       "isVariablePower": true,
       "name": "Manufacturer",
@@ -1451,7 +1451,7 @@
     },
     "miner-mk-1": {
       "category": "extractor",
-      "icon": "MM",
+      "icon": "desc-minermk1-c_64.png",
       "id": "miner-mk-1",
       "name": "Miner Mk.1",
       "powerMW": 5,
@@ -1460,7 +1460,7 @@
     },
     "miner-mk-2": {
       "category": "extractor",
-      "icon": "MM",
+      "icon": "desc-minermk2-c_64.png",
       "id": "miner-mk-2",
       "name": "Miner Mk.2",
       "powerMW": 12,
@@ -1469,7 +1469,7 @@
     },
     "miner-mk-3": {
       "category": "extractor",
-      "icon": "MM",
+      "icon": "desc-minermk3-c_64.png",
       "id": "miner-mk-3",
       "name": "Miner Mk.3",
       "powerMW": 30,
@@ -1478,7 +1478,7 @@
     },
     "nuclear-power-plant": {
       "category": "generator",
-      "icon": "NP",
+      "icon": "desc-generatornuclear-c_64.png",
       "id": "nuclear-power-plant",
       "name": "Nuclear Power Plant",
       "powerMW": 2500,
@@ -1488,7 +1488,7 @@
     },
     "oil-extractor": {
       "category": "extractor",
-      "icon": "OE",
+      "icon": "desc-oilpump-c_64.png",
       "id": "oil-extractor",
       "name": "Oil Extractor",
       "powerMW": 40,
@@ -1497,7 +1497,7 @@
     },
     "packager": {
       "category": "manufacturer",
-      "icon": "PA",
+      "icon": "desc-packager-c_64.png",
       "id": "packager",
       "isVariablePower": true,
       "name": "Packager",
@@ -1507,7 +1507,7 @@
     },
     "particle-accelerator": {
       "category": "manufacturer",
-      "icon": "PA",
+      "icon": "desc-hadroncollider-c_64.png",
       "id": "particle-accelerator",
       "isVariablePower": true,
       "name": "Particle Accelerator",
@@ -1517,7 +1517,7 @@
     },
     "refinery": {
       "category": "manufacturer",
-      "icon": "RE",
+      "icon": "desc-oilrefinery-c_64.png",
       "id": "refinery",
       "isVariablePower": true,
       "name": "Refinery",
@@ -1527,7 +1527,7 @@
     },
     "resource-well-extractor": {
       "category": "extractor",
-      "icon": "RW",
+      "icon": "desc-frackingextractor-c_64.png",
       "id": "resource-well-extractor",
       "name": "Resource Well Extractor",
       "powerMW": 0,
@@ -1536,7 +1536,7 @@
     },
     "smelter": {
       "category": "manufacturer",
-      "icon": "SM",
+      "icon": "desc-smeltermk1-c_64.png",
       "id": "smelter",
       "isVariablePower": true,
       "name": "Smelter",
@@ -1546,7 +1546,7 @@
     }
   },
   "meta": {
-    "gameVersion": "satisfactorytools@local",
+    "gameVersion": "satisfactorytools@master",
     "source": "docs"
   },
   "recipes": {

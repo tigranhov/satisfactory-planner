@@ -43,11 +43,21 @@ export function defaultPowerShardSlots(category: string): number {
 }
 
 // 2-letter icon placeholder: first letter of each word, max two letters.
+// Used as fallback when a PNG asset isn't available.
 export function iconLabelFromName(name: string): string {
   const words = name.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/);
   if (words.length === 0) return '?';
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+// Derive the 64px PNG basename that SatisfactoryTools publishes under
+// www/assets/images/items/. Convention: lowercase the className and replace
+// `_` with `-`, then append `_64.png`. Example:
+//   Desc_AluminumIngot_C  →  desc-aluminumingot-c_64.png
+//   Desc_ConstructorMk1_C →  desc-constructormk1-c_64.png
+export function iconFileFromClassName(className: string): string {
+  return className.toLowerCase().replace(/_/g, '-') + '_64.png';
 }
 
 export const DEFAULT_RESOURCE_DEFAULTS: ResourceNodeDefaults = {

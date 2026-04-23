@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { loadGameData, getRecipeList } from '@/data/loader';
+import { resolveIconUrl } from '@/data/icons';
 import type { Recipe } from '@/data/types';
 
 const gameData = loadGameData();
@@ -36,21 +37,36 @@ export default function Sidebar() {
       </div>
       <div className="flex-1 overflow-y-auto p-2">
         <div className="mb-2 text-xs uppercase tracking-wider text-[#6b7388]">Recipes</div>
-        {recipes.map((r) => (
-          <div
-            key={r.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, r)}
-            className="mb-1 cursor-grab select-none rounded border border-border bg-panel-hi px-2 py-1.5 text-sm hover:border-accent"
-          >
-            <div className="font-medium">{r.name}</div>
-            <div className="text-xs text-[#6b7388]">
-              {r.ingredients.map((i) => gameData.items[i.itemId]?.name).join(' + ')}
-              {' → '}
-              {r.products.map((p) => gameData.items[p.itemId]?.name).join(' + ')}
+        {recipes.map((r) => {
+          const primaryItem =
+            gameData.items[r.products[0]?.itemId ?? r.ingredients[0]?.itemId ?? ''];
+          const iconUrl = resolveIconUrl(primaryItem?.icon);
+          return (
+            <div
+              key={r.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, r)}
+              className="mb-1 flex cursor-grab select-none items-center gap-2 rounded border border-border bg-panel-hi px-2 py-1.5 text-sm hover:border-accent"
+            >
+              {iconUrl && (
+                <img
+                  src={iconUrl}
+                  alt=""
+                  className="h-8 w-8 shrink-0 rounded object-contain"
+                  draggable={false}
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{r.name}</div>
+                <div className="truncate text-xs text-[#6b7388]">
+                  {r.ingredients.map((i) => gameData.items[i.itemId]?.name).join(' + ')}
+                  {' → '}
+                  {r.products.map((p) => gameData.items[p.itemId]?.name).join(' + ')}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

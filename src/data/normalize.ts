@@ -27,7 +27,7 @@ import {
   DEFAULT_RESOURCE_DEFAULTS,
   SOMERSLOOP_SLOTS,
   defaultPowerShardSlots,
-  iconLabelFromName,
+  iconFileFromClassName,
 } from './constants';
 import { toSlug } from '@/lib/ids';
 
@@ -155,7 +155,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
     items[src_item.slug] = {
       id: src_item.slug,
       name: src_item.name,
-      icon: iconLabelFromName(src_item.name),
+      icon: iconFileFromClassName(src_item.className),
       form,
       stackSize: src_item.liquid ? undefined : src_item.stackSize,
       sinkPoints: src_item.sinkPoints || undefined,
@@ -187,7 +187,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
     machines[b.slug] = {
       id: b.slug,
       name: b.name,
-      icon: iconLabelFromName(b.name),
+      icon: iconFileFromClassName(b.className),
       category: 'manufacturer',
       powerMW: b.metadata?.powerConsumption ?? 0,
       isVariablePower: b.metadata?.powerConsumptionExponent !== undefined && b.metadata?.powerConsumptionExponent !== 1.6,
@@ -206,7 +206,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
     machines[slug] = {
       id: slug,
       name,
-      icon: iconLabelFromName(name),
+      icon: iconFileFromClassName(m.className),
       category: 'extractor',
       powerMW: building?.metadata?.powerConsumption ?? 0,
       powerShardSlots: defaultPowerShardSlots('extractor'),
@@ -223,7 +223,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
     machines[slug] = {
       id: slug,
       name,
-      icon: iconLabelFromName(name),
+      icon: iconFileFromClassName(g.className),
       category: 'generator',
       powerMW: g.powerProduction,
       powerShardSlots: defaultPowerShardSlots('generator'),
