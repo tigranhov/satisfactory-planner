@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
 const isDev = !app.isPackaged;
@@ -38,6 +39,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+function blueprintsFilePath() {
+  return join(app.getPath('userData'), 'blueprints.json');
+}
+
 function registerIpcHandlers() {
   ipcMain.handle('project:save', async (_event, _payload: unknown) => {
     throw new Error('not implemented');
@@ -47,5 +52,29 @@ function registerIpcHandlers() {
   });
   ipcMain.handle('project:listRecent', async () => {
     throw new Error('not implemented');
+  });
+
+  ipcMain.handle('blueprints:load', async () => {
+    const file = blueprintsFilePath();
+    try {
+      const raw = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blueprints)) {
+        return parsed.blueprints as unknown[];
+      }
+      return [];
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      // Bad JSON or unreadable — surface to renderer as empty rather than crash.
+      console.error('[blueprints:load]', err);
+      return [];
+    }
+  });
+
+  ipcMain.handle('blueprints:save', async (_event, blueprints: unknown[]) => {
+    const file = blueprintsFilePath();
+    await fs.mkdir(app.getPath('userData'), { recursive: true });
+    const payload = JSON.stringify({ version: 1, blueprints }, null, 2);
+    await fs.writeFile(file, payload, 'utf8');
   });
 }
