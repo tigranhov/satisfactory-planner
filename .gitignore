@@ -2,7 +2,7 @@ node_modules/
 dist/
 dist-electron/
 dist-web/
-release/
+/release/
 build/
 .env
 .env.local
@@ -14,5 +14,6 @@ bun.lockb
 bun.lock
 tmp/
 *.tsbuildinfo
-.claude/
+.claude/*
+!.claude/skills/
 .diff-*.txt
