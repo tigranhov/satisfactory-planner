@@ -1,65 +1,58 @@
-# satisfactory-planner
+# Satisfactory Planner
 
-Node-graph factory planner for Satisfactory, with nested canvases (Unreal-Blueprint style).
+A node-graph factory planner for [Satisfactory](https://www.satisfactorygame.com/) — build your production lines as a graph, let the tool compute item flow, and spot bottlenecks before you break ground in-game.
 
-## Stack
+Ships as a Windows desktop app with auto-updates from GitHub Releases. Game data tracks Satisfactory 1.0 via [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools).
 
-- Electron + React 18 + TypeScript
-- [@xyflow/react](https://reactflow.dev) for the node graph
-- Zustand for state, Tailwind for styling
-- Vite (via `electron-vite`) for dev tooling, `electron-builder` for Windows installers
+## Features
 
-## Scripts
+- **Recipe nodes** — place any recipe; per-node clock speed, machine count, and somersloop slots. Power draw and boosted output rates are computed live.
+- **Flow calculation** — demand-driven, source-capped. Edges colour-code as **green / blue / orange** for exact / surplus / shortage, so mismatches are obvious at a glance.
+- **Factory nodes (nested subgraphs)** — collapse a whole sub-chain into a single node with input/output ports; double-click to drill in, breadcrumb back out. Arbitrary depth.
+- **Blueprint library** — reusable parameterised sub-assemblies with a count multiplier, persisted across projects. Extract any canvas selection into a blueprint; drop blueprints into other graphs from the picker.
+- **Hub node** — a pass-through junction with one "fat" input + one "fat" output handle, each accepting many connections. Item type is inferred from the first connected edge (no upfront item pick). Declutters one-source-to-many (or many-to-one) factory layouts without drawing N×M edges.
+- **Multi-project** — each project autosaves to its own file under `%APPDATA%\Satisfactory Planner`. Project switcher in the top bar; rename / create / delete inline.
+- **Right-click everywhere** — canvas right-click opens a recipe / blueprint / input / output picker with a utility sidebar for hub and future splitter/merger. Node right-click opens count / overclock / somersloop controls.
+- **Clipboard** — `Ctrl+C`, `Ctrl+V`, `Ctrl+D`, `Delete`, `Backspace` all work across nodes and selections.
+- **Auto-update** — installed copies check GitHub Releases on launch and surface a "Restart to update" chip when a newer version is downloaded.
 
-```bash
-npm install            # install deps
-npm run dev            # start Electron + Vite dev server
-npm run typecheck      # tsc --noEmit
-npm run build          # build renderer + electron bundles
-npm run build:web      # build static web bundle (dist-web/) for GitHub Pages
-npm run dist           # build + package Windows installer (release/)
-```
+## Install
 
-## Layout
+Head to [Releases](https://github.com/tigranhov/satisfactory-planner/releases) and grab the latest `Satisfactory Planner Setup <version>.exe`. Double-click to install; Windows SmartScreen will warn on first launch (the app isn't code-signed yet) — click **More info → Run anyway**.
 
-```
-electron/        Electron main + preload (IPC stubs for save/load)
-src/
-  components/
-    layout/      AppShell, TopBar, Sidebar, Inspector
-    canvas/      GraphCanvas, RecipeNode, CompositeNode, RateEdge, ItemHandle
-  data/          Game data types, sample.json, loader, Docs.json normalize stub
-  models/        Graph/Edge/Node models, recipe rate math, calc stubs
-  store/         Zustand stores (graphs + nested-canvas navigation)
-  hooks/         useActiveGraph
-  lib/           id generators
-  styles/        globals.css (Tailwind + React Flow theme)
-```
+The installer is per-user (no admin prompt), installs to `%LOCALAPPDATA%\Programs\Satisfactory Planner`, and adds a desktop + Start Menu shortcut. Uninstall via Settings → Apps.
 
-## Scaffold scope
+Once installed, the app self-updates: each launch queries GitHub for a newer release, downloads it in the background, and prompts you to restart via a top-bar chip.
 
-What works:
+## Usage
 
-- Three-pane layout with breadcrumb navigation
-- Searchable recipe palette (drag onto canvas to place a node)
-- RecipeNode renders ingredient handles on the left, product handles on the right,
-  drag-to-connect between handles creates an edge with a live rate label
-- Inspector edits clock speed and building count with power rollup
-- CompositeNode: add via TopBar button, double-click to enter a nested canvas,
-  click breadcrumb to pop back out
+**First launch** creates a project called "Untitled" and drops you on an empty canvas. Everything is saved automatically as you work.
 
-Deferred (clear extension points in the code):
+### Basics
 
-- Real Docs.json import — `src/data/normalize.ts` documents the mapping
-- Persistence — IPC stubs in `electron/main.ts` return "not implemented"
-- Steam Cloud / greenworks — preload API is ready to extend
-- Rate propagation math — `src/models/calc.ts#propagateRates`
-- Subgraph I/O aggregation — `src/models/calc.ts#aggregateSubgraph`
-- Undo/redo, real item icons, tests
+- **Right-click the canvas** → pick **Recipe** (type an item name, then pick a recipe or blueprint producing it), **Blueprint**, **Input / Output** (only inside subgraphs), or use the **right-side utility strip** to drop a Hub.
+- **Drag from a handle** on one node to a handle on another to create an edge. The tool validates item-match and rejects mismatches.
+- **Right-click a node** → delete, duplicate, extract selection to blueprint, edit overclock / somersloop / machine count.
+- **Double-click a factory or blueprint node** → drill into its subgraph. Use the breadcrumb to pop back out.
 
-## Deploy web build to GitHub Pages
+### Keyboard shortcuts
 
-```bash
-npm run build:web
-# Publish dist-web/ via your preferred action, e.g. peaceiris/actions-gh-pages
-```
+| Key | Action |
+| --- | --- |
+| `Del` / `Backspace` | Delete selected nodes / edges |
+| `Ctrl+C` | Copy selection |
+| `Ctrl+V` | Paste at cursor |
+| `Ctrl+D` | Duplicate selection |
+| `Escape` | Close any open picker / context menu |
+| Double-click | Enter a factory or blueprint subgraph |
+
+### Hub tips
+
+Hubs default to `?` (unset). They adopt the first connected edge's item and stick. Disconnect all edges and the hub resets to `?`. Under shortage, outgoing flow is distributed proportionally to each consumer's demand — useful when one smelter feeds several assemblers and you want to see exactly which one gets starved.
+
+## Acknowledgements
+
+- Game data from [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools) — the canonical community dataset.
+- [Coffee Stain Studios](https://www.coffeestainstudios.com/) for making Satisfactory.
+
+Not affiliated with Coffee Stain Studios. Satisfactory is a trademark of Coffee Stain Publishing AB.
