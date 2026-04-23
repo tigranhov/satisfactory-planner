@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
+import { setupAutoUpdater } from './updater';
 
 const isDev = !app.isPackaged;
 
@@ -28,6 +29,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   registerIpcHandlers();
+  setupAutoUpdater();
   createWindow();
 
   app.on('activate', () => {
@@ -43,15 +45,70 @@ function blueprintsFilePath() {
   return join(app.getPath('userData'), 'blueprints.json');
 }
 
+function projectsDir() {
+  return join(app.getPath('userData'), 'projects');
+}
+
+function projectIndexPath() {
+  return join(projectsDir(), 'index.json');
+}
+
+function projectFilePath(id: string) {
+  return join(projectsDir(), `${id}.json`);
+}
+
+// Guards against path traversal — only ids matching the nanoid shape from
+// `lib/ids.ts` (`p_` + 10 chars of nanoid alphabet) touch the filesystem.
+const PROJECT_ID_RE = /^p_[A-Za-z0-9_-]{10}$/;
+
 function registerIpcHandlers() {
-  ipcMain.handle('project:save', async (_event, _payload: unknown) => {
-    throw new Error('not implemented');
+  ipcMain.handle('projects:loadIndex', async () => {
+    const file = projectIndexPath();
+    try {
+      const raw = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+      return null;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      console.error('[projects:loadIndex]', err);
+      return null;
+    }
   });
-  ipcMain.handle('project:load', async () => {
-    throw new Error('not implemented');
+
+  ipcMain.handle('projects:saveIndex', async (_event, index: unknown) => {
+    await fs.mkdir(projectsDir(), { recursive: true });
+    await fs.writeFile(projectIndexPath(), JSON.stringify(index, null, 2), 'utf8');
   });
-  ipcMain.handle('project:listRecent', async () => {
-    throw new Error('not implemented');
+
+  ipcMain.handle('projects:loadProject', async (_event, id: string) => {
+    if (!PROJECT_ID_RE.test(id)) throw new Error(`Invalid project id: ${id}`);
+    const file = projectFilePath(id);
+    try {
+      const raw = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+      return null;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      console.error('[projects:loadProject]', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('projects:saveProject', async (_event, id: string, payload: unknown) => {
+    if (!PROJECT_ID_RE.test(id)) throw new Error(`Invalid project id: ${id}`);
+    await fs.mkdir(projectsDir(), { recursive: true });
+    await fs.writeFile(projectFilePath(id), JSON.stringify(payload, null, 2), 'utf8');
+  });
+
+  ipcMain.handle('projects:deleteProject', async (_event, id: string) => {
+    if (!PROJECT_ID_RE.test(id)) throw new Error(`Invalid project id: ${id}`);
+    try {
+      await fs.unlink(projectFilePath(id));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    }
   });
 
   ipcMain.handle('blueprints:load', async () => {
@@ -65,7 +122,6 @@ function registerIpcHandlers() {
       return [];
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
-      // Bad JSON or unreadable — surface to renderer as empty rather than crash.
       console.error('[blueprints:load]', err);
       return [];
     }

@@ -13,15 +13,17 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "sync-data": "bun scripts/sync-gamedata.ts",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "dist:publish": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@xyflow/react": "^12.3.5",
+    "electron-updater": "^6.8.3",
+    "lucide-react": "^0.462.0",
     "nanoid": "^5.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^5.0.0",
-    "lucide-react": "^0.462.0"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
@@ -54,8 +56,26 @@
       "dist/**",
       "package.json"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "tigranhov",
+      "repo": "satisfactory-planner"
+    },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Satisfactory Planner"
     }
   }
 }
