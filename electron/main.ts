@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { setupAutoUpdater } from './updater';
@@ -28,6 +28,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   registerIpcHandlers();
   setupAutoUpdater();
   createWindow();
