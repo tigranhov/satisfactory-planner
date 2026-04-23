@@ -12,6 +12,7 @@ import type { Blueprint } from '@/models/blueprint';
 import {
   handleIndexFromId,
   internalNodeIdFromSubgraphHandle,
+  isHublikeKind,
   recipeInputs,
   recipeOutputs,
 } from './factory';
@@ -73,8 +74,9 @@ function handleRate(
     const fac = node.data as FactoryNodeData;
     return subgraphHandleRate(fac.factoryGraphId, 1, handleId, side, data, resolver);
   }
-  // Hub rates are dynamic (derived from connected edges) and computed inline
-  // in computeFlows where the edge-rate map is in scope.
+  // Hub-like rates (hub / splitter / merger) are dynamic — derived from
+  // connected edges and computed inline in computeFlows where the edge-rate
+  // map is in scope.
   return 0;
 }
 
@@ -115,9 +117,10 @@ function satisfactionFor(demand: number, supply: number): number {
   return Math.min(1, supply / demand);
 }
 
-// Topological sort of hub nodes using only hub→hub edges. Returns hubs in
-// upstream-first order; reverse it for downstream-first. A cycle collapses
-// to insertion order (with a warning) — hub cycles aren't a supported shape.
+// Topological sort of hub-like nodes using only hublike→hublike edges.
+// Returns nodes in upstream-first order; reverse it for downstream-first.
+// A cycle collapses to insertion order (with a warning) — hublike cycles
+// aren't a supported shape.
 function topoSortHubs(
   hubs: GraphNode[],
   edges: readonly GraphEdge[],
@@ -149,7 +152,7 @@ function topoSortHubs(
     }
   }
   if (ordered.length !== hubs.length) {
-    console.warn('[flow] hub-to-hub cycle detected; falling back to insertion order');
+    console.warn('[flow] hublike cycle detected; falling back to insertion order');
     return hubs;
   }
   return ordered;
@@ -158,16 +161,16 @@ function topoSortHubs(
 const NO_RESOLVER: SubgraphResolver = () => undefined;
 
 // Demand-driven + source-capped flow:
-//   1a. Each non-hub target handle splits its demand across incoming edges
-//       (or, for Input/Output boundaries with demand=Infinity, inherits
-//       each source's capacity).
-//   1b. Hubs are processed in reverse topological order: each hub's input
-//       edges take rate = sum(out-edges) / N. hubInDemand caches the
-//       pre-scaling total for Phase 3 reporting.
-//   2a. Non-hub source handles scale their outgoing edges down if over
-//       capacity. Taps (Input source handle) have no cap.
-//   2b. Hub source handles do the same, in forward topological order, so
-//       upstream hub scaling settles before downstream hubs read capacity.
+//   1a. Each non-hublike target handle splits its demand across incoming
+//       edges (or, for Input/Output boundaries with demand=Infinity,
+//       inherits each source's capacity).
+//   1b. Hub-likes are processed in reverse topological order: demand is
+//       pooled across all input edges regardless of handle. edgeInitDemand
+//       snapshots each edge's pre-scaling ask for Phase 3 reporting.
+//   2a. Non-hublike source handles scale their outgoing edges down if
+//       over capacity. Taps (Input source handle) have no cap.
+//   2b. Hub-like source handles do the same, in forward topological order,
+//       with all outgoing edges pooled so splits scale proportionally.
 //   3.  Per target handle: demand, supply, satisfaction; edges inherit
 //       the target's satisfaction ratio.
 export function computeFlows(
@@ -184,12 +187,13 @@ export function computeFlows(
   const bySource = groupEdges(graph.edges, 'source');
 
   const edgeRate = new Map<string, number>();
-  // hub input demand (pre-Phase-2 scaling) — reported in Phase 3 so
-  // shortage is detected against the consumers' original ask, not the
-  // post-cap delivery.
-  const hubInDemand = new Map<NodeId, number>();
+  // Pre-scaling rate each hublike input edge was assigned in Phase 1b.
+  // Phase 3 reads this as the per-handle demand so multi-input hub-likes
+  // (mergers) can report shortage per input rather than against the node
+  // total, and single-input hubs keep their original demand semantics.
+  const edgeInitDemand = new Map<string, number>();
 
-  // A hub's input-handle demand mirrors its output-side load, and its
+  // A hub-like's input-handle demand mirrors its output-side load, and its
   // output-handle capacity mirrors its input-side supply — hence the
   // map inversion.
   const hubRate = (nodeId: NodeId, side: 'in' | 'out'): number => {
@@ -202,14 +206,14 @@ export function computeFlows(
     return sum;
   };
   const rateOf = (node: GraphNode | undefined, handleId: string, side: 'in' | 'out'): number => {
-    if (node?.data.kind === 'hub') return hubRate(node.id, side);
+    if (node && isHublikeKind(node.data.kind)) return hubRate(node.id, side);
     return handleRate(node, data, resolver, handleId, side);
   };
 
   // Phase 1a
   for (const [nodeId, byHandle] of byTarget) {
     const node = nodeById.get(nodeId);
-    if (node?.data.kind === 'hub') continue;
+    if (node && isHublikeKind(node.data.kind)) continue;
     for (const [handleId, group] of byHandle) {
       const demand = rateOf(node, handleId, 'in');
       if (demand === Number.POSITIVE_INFINITY) {
@@ -225,8 +229,12 @@ export function computeFlows(
     }
   }
 
-  // Phase 1b
-  const hubs = graph.nodes.filter((n) => n.data.kind === 'hub');
+  // Phase 1b — hub-likes process in reverse topological order so each node
+  // reads its downstream demand (already set) before setting its own
+  // upstream ask. Demand is pooled across ALL incoming edges regardless of
+  // which input handle they land on; this keeps multi-input nodes (mergers)
+  // consistent with the single-input hub case.
+  const hubs = graph.nodes.filter((n) => isHublikeKind(n.data.kind));
   const hubsForward = hubs.length ? topoSortHubs(hubs, graph.edges, nodeById) : [];
   const hubsReverse = hubsForward.slice().reverse();
   for (const hub of hubsReverse) {
@@ -237,12 +245,16 @@ export function computeFlows(
         for (const e of group) totalDemand += edgeRate.get(e.id) ?? 0;
       }
     }
-    hubInDemand.set(hub.id, totalDemand);
     const th = byTarget.get(hub.id);
     if (!th) continue;
+    let totalInEdges = 0;
+    for (const group of th.values()) totalInEdges += group.length;
+    const per = totalInEdges ? totalDemand / totalInEdges : 0;
     for (const group of th.values()) {
-      const per = group.length ? totalDemand / group.length : 0;
-      for (const e of group) edgeRate.set(e.id, per);
+      for (const e of group) {
+        edgeRate.set(e.id, per);
+        edgeInitDemand.set(e.id, per);
+      }
     }
   }
 
@@ -260,7 +272,7 @@ export function computeFlows(
   // Phase 2a
   for (const [nodeId, byHandle] of bySource) {
     const node = nodeById.get(nodeId);
-    if (node?.data.kind === 'hub') continue;
+    if (node && isHublikeKind(node.data.kind)) continue;
     for (const [handleId, group] of byHandle) {
       const capacity = rateOf(node, handleId, 'out');
       if (capacity === Number.POSITIVE_INFINITY) {
@@ -271,24 +283,29 @@ export function computeFlows(
     }
   }
 
-  // Phase 2b
+  // Phase 2b — hub-like source capacity is the total that landed on the
+  // input side in Phase 2a. Pool all outgoing edges across handles so a
+  // splitter's three outputs scale proportionally when input supply is
+  // short — matching the game's on-demand split behavior.
   for (const hub of hubsForward) {
     const byHandle = bySource.get(hub.id);
     if (!byHandle) continue;
     const capacity = hubRate(hub.id, 'out');
-    for (const [, group] of byHandle) scaleSource(group, capacity);
+    const allOut: GraphEdge[] = [];
+    for (const group of byHandle.values()) allOut.push(...group);
+    scaleSource(allOut, capacity);
   }
 
   // Phase 3
   for (const [nodeId, byHandle] of byTarget) {
     const node = nodeById.get(nodeId);
+    const isHublike = node ? isHublikeKind(node.data.kind) : false;
     let handleMap = targetHandles.get(nodeId);
     if (!handleMap) targetHandles.set(nodeId, (handleMap = new Map()));
     for (const [handleId, group] of byHandle) {
-      const demand =
-        node?.data.kind === 'hub'
-          ? hubInDemand.get(node.id) ?? 0
-          : rateOf(node, handleId, 'in');
+      const demand = isHublike
+        ? group.reduce((s, e) => s + (edgeInitDemand.get(e.id) ?? 0), 0)
+        : rateOf(node, handleId, 'in');
       const supply = group.reduce((s, e) => s + (edgeRate.get(e.id) ?? 0), 0);
       const satisfaction = satisfactionFor(demand, supply);
       const reportedDemand = demand === Number.POSITIVE_INFINITY ? supply : demand;

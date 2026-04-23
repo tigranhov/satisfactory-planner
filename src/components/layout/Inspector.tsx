@@ -2,10 +2,18 @@ import { useActiveGraph } from '@/hooks/useActiveGraph';
 import { useGraphStore } from '@/store/graphStore';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
-import { nodePowerMW } from '@/models/factory';
+import { nodePowerMW, type HublikeKind } from '@/models/factory';
 import PowerReadout from '@/components/canvas/editors/PowerReadout';
 
 const gameData = loadGameData();
+
+const HUBLIKE_DESCRIPTIONS: Record<HublikeKind, string> = {
+  hub: 'Hub node — item type is set by the first connection.',
+  splitter:
+    'Splitter — splits on demand across 3 outputs. Unused capacity backs up the input line, matching in-game behavior.',
+  merger:
+    'Merger — combines up to 3 inputs into a single output. Downstream throttling backs pressure up through all inputs.',
+};
 
 interface Props {
   selectedNodeId: string | null;
@@ -137,10 +145,11 @@ export default function Inspector({ selectedNodeId }: Props) {
     );
   }
 
-  if (node.data.kind === 'hub') {
+  const { kind } = node.data;
+  if (kind === 'hub' || kind === 'splitter' || kind === 'merger') {
     return (
       <div className="border-l border-border bg-panel p-4 text-sm text-[#6b7388]">
-        Hub node — item type is set by the first connection.
+        {HUBLIKE_DESCRIPTIONS[kind]}
       </div>
     );
   }

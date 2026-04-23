@@ -1,5 +1,5 @@
 import type { GameData, Recipe } from '@/data/types';
-import type { Graph, NodeId, RecipeNodeData } from './graph';
+import type { Graph, NodeData, NodeId, RecipeNodeData } from './graph';
 
 export function itemsPerMinute(recipe: Recipe, amount: number, clockSpeed = 1, count = 1) {
   return (amount * 60) / recipe.durationSec * clockSpeed * count;
@@ -54,6 +54,10 @@ const HANDLE_PREFIX = {
   subgraphOut: 'bpi-out',
   hubIn: 'hub-in',
   hubOut: 'hub-out',
+  splitterIn: 'split-in',
+  splitterOut: 'split-out',
+  mergerIn: 'merge-in',
+  mergerOut: 'merge-out',
 } as const;
 
 const SOURCE_HANDLE_PREFIXES: readonly string[] = [
@@ -78,18 +82,32 @@ export function handleIdForInterface(kind: 'input' | 'output', itemId: string) {
 export const HUB_IN_HANDLE = HANDLE_PREFIX.hubIn;
 export const HUB_OUT_HANDLE = HANDLE_PREFIX.hubOut;
 
-export function isHubHandle(handleId: string): 'in' | 'out' | null {
-  if (handleId === HUB_IN_HANDLE) return 'in';
-  if (handleId === HUB_OUT_HANDLE) return 'out';
-  return null;
+export const SPLITTER_IN_HANDLE = HANDLE_PREFIX.splitterIn;
+export const SPLITTER_OUT_HANDLES = [
+  `${HANDLE_PREFIX.splitterOut}-0`,
+  `${HANDLE_PREFIX.splitterOut}-1`,
+  `${HANDLE_PREFIX.splitterOut}-2`,
+] as const;
+
+export const MERGER_IN_HANDLES = [
+  `${HANDLE_PREFIX.mergerIn}-0`,
+  `${HANDLE_PREFIX.mergerIn}-1`,
+  `${HANDLE_PREFIX.mergerIn}-2`,
+] as const;
+export const MERGER_OUT_HANDLE = HANDLE_PREFIX.mergerOut;
+
+export type HublikeKind = 'hub' | 'splitter' | 'merger';
+
+export function isHublikeKind(kind: NodeData['kind']): kind is HublikeKind {
+  return kind === 'hub' || kind === 'splitter' || kind === 'merger';
 }
 
-// A hub's "item type" is derived from whatever flows through it — i.e. the
-// itemId shared by its incident edges. Returns null when the hub is
+// A hub-like's "item type" is derived from whatever flows through it — i.e.
+// the itemId shared by its incident edges. Returns null when the node is
 // disconnected, which UI treats as the "?" unset state.
-export function hubItemIdFromEdges(graph: Graph, hubNodeId: NodeId): string | null {
+export function hublikeItemFromEdges(graph: Graph, nodeId: NodeId): string | null {
   for (const e of graph.edges) {
-    if (e.source === hubNodeId || e.target === hubNodeId) return e.itemId || null;
+    if (e.source === nodeId || e.target === nodeId) return e.itemId || null;
   }
   return null;
 }

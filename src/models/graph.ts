@@ -4,7 +4,15 @@ export type GraphId = string;
 export type NodeId = string;
 export type EdgeId = string;
 
-export type NodeKind = 'recipe' | 'factory' | 'input' | 'output' | 'blueprint' | 'hub';
+export type NodeKind =
+  | 'recipe'
+  | 'factory'
+  | 'input'
+  | 'output'
+  | 'blueprint'
+  | 'hub'
+  | 'splitter'
+  | 'merger';
 
 export interface RecipeNodeData {
   kind: 'recipe';
@@ -34,11 +42,22 @@ export interface BlueprintNodeData {
   count: number;
 }
 
-// Hubs are itemless in their stored form — the item they carry is derived
-// from incident edges at render/connect time. A hub with zero edges is an
-// "unset" hub and displays as a `?`. See hubItemIdFromEdges.
+// Hub-like passthroughs (hub, splitter, merger) are itemless in their stored
+// form — the item they carry is derived from incident edges at render/connect
+// time. A disconnected hub-like is an "unset" node and displays as a `?`.
+// See hublikeItemFromEdges.
 export interface HubNodeData {
   kind: 'hub';
+  label?: string;
+}
+
+export interface SplitterNodeData {
+  kind: 'splitter';
+  label?: string;
+}
+
+export interface MergerNodeData {
+  kind: 'merger';
   label?: string;
 }
 
@@ -47,7 +66,9 @@ export type NodeData =
   | FactoryNodeData
   | InterfaceNodeData
   | BlueprintNodeData
-  | HubNodeData;
+  | HubNodeData
+  | SplitterNodeData
+  | MergerNodeData;
 
 export interface GraphNode {
   id: NodeId;

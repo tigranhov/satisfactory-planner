@@ -3,8 +3,10 @@ import {
   ArrowLeft,
   ArrowLeftFromLine,
   ArrowRightFromLine,
+  Merge,
   Package,
   Search,
+  Split,
   Waypoints,
   Wrench,
 } from 'lucide-react';
@@ -57,10 +59,19 @@ interface Props {
     itemId: string,
     flowPosition: { x: number; y: number },
   ) => void;
-  // Utility nodes place instantly from the always-visible side strip; each
-  // kind has its own callback. Add more as splitters / mergers land.
-  onAddHub?: (flowPosition: { x: number; y: number }) => void;
+  // Utility nodes (hub / splitter / merger) place instantly from the
+  // always-visible side strip.
+  onAddHublike?: (
+    kind: 'hub' | 'splitter' | 'merger',
+    flowPosition: { x: number; y: number },
+  ) => void;
 }
+
+const HUBLIKE_BUTTONS = [
+  { kind: 'hub' as const, icon: Waypoints, title: 'Add Hub', hoverClass: 'hover:text-amber-300' },
+  { kind: 'splitter' as const, icon: Split, title: 'Add Splitter (1 → 3)', hoverClass: 'hover:text-cyan-300' },
+  { kind: 'merger' as const, icon: Merge, title: 'Add Merger (3 → 1)', hoverClass: 'hover:text-cyan-300' },
+];
 
 function filterByName(rows: TopRow[], query: string): TopRow[] {
   const q = query.trim().toLowerCase();
@@ -79,7 +90,7 @@ export default function CanvasContextMenu({
   onSelectBlueprint,
   allowInterface = false,
   onSelectInterface,
-  onAddHub,
+  onAddHublike,
 }: Props) {
   const [mode, setMode] = useState<Mode>('recipe');
   const [query, setQuery] = useState('');
@@ -442,16 +453,19 @@ export default function CanvasContextMenu({
       </div>
       </div>
       <div className="flex w-9 flex-col items-center gap-1 border-l border-border bg-panel-hi py-1.5">
-        <button
-          onClick={() => {
-            onAddHub?.(flowPosition);
-            onClose();
-          }}
-          title="Add Hub"
-          className="flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel hover:text-amber-300"
-        >
-          <Waypoints className="h-4 w-4" />
-        </button>
+        {HUBLIKE_BUTTONS.map(({ kind, icon: Icon, title, hoverClass }) => (
+          <button
+            key={kind}
+            onClick={() => {
+              onAddHublike?.(kind, flowPosition);
+              onClose();
+            }}
+            title={title}
+            className={`flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel ${hoverClass}`}
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        ))}
       </div>
     </div>
   );

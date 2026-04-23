@@ -22,13 +22,17 @@ import FactoryNode from './nodes/FactoryNode';
 import InterfaceNode from './nodes/InterfaceNode';
 import BlueprintNode from './nodes/BlueprintNode';
 import HubNode from './nodes/HubNode';
+import SplitterNode from './nodes/SplitterNode';
+import MergerNode from './nodes/MergerNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
+import EdgeContextMenu from './EdgeContextMenu';
 import { computeFlows, type HandleFlow, type SubgraphResolver } from '@/models/flow';
 import { useSubgraphResolver } from '@/hooks/useSubgraphResolver';
 import {
-  hubItemIdFromEdges,
+  hublikeItemFromEdges,
+  isHublikeKind,
   itemIdFromSourceHandle,
   itemIdFromTargetHandle,
   itemsPerMinute,
@@ -75,15 +79,17 @@ const nodeTypes = {
   output: InterfaceNode,
   blueprint: BlueprintNode,
   hub: HubNode,
+  splitter: SplitterNode,
+  merger: MergerNode,
 };
 const edgeTypes = { rate: RateEdge };
 
 function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[]; edges: Edge[] } {
   const flows = computeFlows(graph, gameData, resolver);
-  // Single edge pass → hub item by node. Avoids scanning graph.edges once per
-  // hub during the node map below (H×E → O(E)).
+  // Single edge pass → hub-like item by node. Avoids scanning graph.edges
+  // once per hub-like during the node map below (H×E → O(E)).
   const hubIds = new Set<string>();
-  for (const n of graph.nodes) if (n.data.kind === 'hub') hubIds.add(n.id);
+  for (const n of graph.nodes) if (isHublikeKind(n.data.kind)) hubIds.add(n.id);
   const hubItemByNode = new Map<string, string>();
   if (hubIds.size) {
     for (const e of graph.edges) {
@@ -97,7 +103,7 @@ function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[];
     const handleFlows: Record<string, HandleFlow> = {};
     if (handleMap) for (const [hid, hf] of handleMap) handleFlows[hid] = hf;
     const extra: Record<string, unknown> = { handleFlows };
-    if (n.data.kind === 'hub') extra.currentItemId = hubItemByNode.get(n.id) ?? null;
+    if (hubIds.has(n.id)) extra.currentItemId = hubItemByNode.get(n.id) ?? null;
     return {
       id: n.id,
       position: n.position,
@@ -156,6 +162,10 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     screen: { x: number; y: number };
     nodeId: string;
   } | null>(null);
+  const [edgeMenu, setEdgeMenu] = useState<{
+    screen: { x: number; y: number };
+    edgeId: string;
+  } | null>(null);
   const cursorFlowRef = useRef<{ x: number; y: number } | null>(null);
   const nodesRef = useRef<Node[]>([]);
   nodesRef.current = nodes;
@@ -206,22 +216,23 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
       // Endpoint itemIds come from the handle string for fixed-item nodes
-      // (recipes, interface boundaries, subgraphs). For hubs — whose item
-      // is derived from incident edges — we look at the hub's existing
-      // connections. Empty string means "no item committed yet".
+      // (recipes, interface boundaries, subgraphs). For hub-likes (hub /
+      // splitter / merger) — whose item is derived from incident edges —
+      // we look at the node's existing connections. Empty string means
+      // "no item committed yet".
       const sourceNode = g.nodes.find((n) => n.id === connection.source);
       const targetNode = g.nodes.find((n) => n.id === connection.target);
       const sourceItemId =
-        sourceNode?.data.kind === 'hub'
-          ? hubItemIdFromEdges(g, sourceNode.id) ?? ''
+        sourceNode && isHublikeKind(sourceNode.data.kind)
+          ? hublikeItemFromEdges(g, sourceNode.id) ?? ''
           : itemIdFromSourceHandle(connection.sourceHandle ?? '');
       const targetItemId =
-        targetNode?.data.kind === 'hub'
-          ? hubItemIdFromEdges(g, targetNode.id) ?? ''
+        targetNode && isHublikeKind(targetNode.data.kind)
+          ? hublikeItemFromEdges(g, targetNode.id) ?? ''
           : itemIdFromTargetHandle(connection.targetHandle ?? '');
       // Reject connections where both ends disagree on item.
       if (sourceItemId && targetItemId && sourceItemId !== targetItemId) return;
-      // Reject two unset hubs connected together — there's no item to carry.
+      // Reject two unset hub-likes connected together — no item to carry.
       const itemId = sourceItemId || targetItemId;
       if (!itemId) return;
       const newEdge: Omit<GraphEdge, 'id'> = {
@@ -298,9 +309,9 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [],
   );
 
-  const onAddHub = useCallback(
-    (position: { x: number; y: number }) => {
-      store.getState().addNode(activeGraphId, position, { kind: 'hub' });
+  const onAddHublike = useCallback(
+    (kind: 'hub' | 'splitter' | 'merger', position: { x: number; y: number }) => {
+      store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
     [activeGraphId, store],
@@ -441,6 +452,12 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     setNodeMenu({ screen: { x: event.clientX, y: event.clientY }, nodeId: node.id });
   }, []);
 
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setEdgeMenu({ screen: { x: event.clientX, y: event.clientY }, edgeId: edge.id });
+  }, []);
+
   const nodeMenuTargets = nodeMenu ? resolveTargets(nodeMenu.nodeId) : new Set<string>();
 
   // Recipe controls only render when the context menu targets a single recipe node.
@@ -535,6 +552,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         deleteKeyCode={['Delete', 'Backspace']}
         proOptions={{ hideAttribution: true }}
       >
@@ -555,7 +573,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onSelectBlueprint={onPickBlueprint}
           allowInterface={isSubgraph}
           onSelectInterface={onPickInterface}
-          onAddHub={onAddHub}
+          onAddHublike={onAddHublike}
         />
       )}
       {nodeMenu && (
@@ -604,6 +622,13 @@ export default function GraphCanvas({ onSelectNode }: Props) {
                 }
               : undefined
           }
+        />
+      )}
+      {edgeMenu && (
+        <EdgeContextMenu
+          screenPosition={edgeMenu.screen}
+          onClose={() => setEdgeMenu(null)}
+          onRemove={() => store.getState().removeEdge(activeGraphId, edgeMenu.edgeId)}
         />
       )}
     </div>
