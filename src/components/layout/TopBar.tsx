@@ -1,10 +1,13 @@
-import { ChevronRight, Save, FolderOpen, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, ChevronRight, Save, FolderOpen, Plus } from 'lucide-react';
 import { useGraphStore } from '@/store/graphStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import { newGraphId } from '@/lib/ids';
+import BlueprintBook from '@/components/blueprints/BlueprintBook';
 
 export default function TopBar() {
+  const [bookOpen, setBookOpen] = useState(false);
   const stack = useNavigationStore((s) => s.stack);
   const popTo = useNavigationStore((s) => s.popTo);
   const graphs = useGraphStore((s) => s.graphs);
@@ -53,6 +56,14 @@ export default function TopBar() {
       </div>
       <div className="flex items-center gap-2">
         <button
+          onClick={() => setBookOpen(true)}
+          className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"
+          title="Open blueprint library"
+        >
+          <BookOpen className="h-4 w-4" />
+          Blueprints
+        </button>
+        <button
           onClick={handleAddComposite}
           className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"
           title="Add composite (nested) node"
@@ -77,6 +88,7 @@ export default function TopBar() {
           Save
         </button>
       </div>
+      <BlueprintBook open={bookOpen} onClose={() => setBookOpen(false)} />
     </div>
   );
 }
