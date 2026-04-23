@@ -9,12 +9,15 @@ import {
   recipeInputs,
   recipeOutputs,
 } from '@/models/factory';
+import type { HandleFlow } from '@/models/flow';
 import type { RecipeNodeData } from '@/models/graph';
 
 const gameData = loadGameData();
 
 function RecipeNode({ id, data, selected }: NodeProps) {
-  const nodeData = data as unknown as RecipeNodeData;
+  const nodeData = data as unknown as RecipeNodeData & {
+    handleFlows?: Record<string, HandleFlow>;
+  };
   const recipe = gameData.recipes[nodeData.recipeId];
   if (!recipe) return null;
 
@@ -37,15 +40,17 @@ function RecipeNode({ id, data, selected }: NodeProps) {
           {recipe.ingredients.map((io, i) => {
             const item = gameData.items[io.itemId];
             const rate = inputs[i].rate;
+            const handleId = handleIdForIngredient(recipe.id, io.itemId, i);
             return (
               <ItemHandle
                 key={`in-${i}`}
-                id={handleIdForIngredient(recipe.id, io.itemId, i)}
+                id={handleId}
                 nodeId={id}
                 side="left"
                 itemName={item?.name ?? io.itemId}
                 itemIcon={item?.icon ?? '?'}
                 rateLabel={`${rate.toFixed(1)}/min`}
+                satisfaction={nodeData.handleFlows?.[handleId]?.satisfaction}
               />
             );
           })}

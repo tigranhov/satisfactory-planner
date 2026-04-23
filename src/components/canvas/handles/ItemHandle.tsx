@@ -1,5 +1,6 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import IconOrLabel from '@/components/ui/IconOrLabel';
+import { FLOW_EPS } from '@/models/flow';
 
 interface Props {
   id: string;
@@ -8,9 +9,18 @@ interface Props {
   itemName: string;
   itemIcon: string;
   rateLabel?: string;
+  satisfaction?: number;
 }
 
-export default function ItemHandle({ id, nodeId, side, itemName, itemIcon, rateLabel }: Props) {
+export default function ItemHandle({
+  id,
+  nodeId,
+  side,
+  itemName,
+  itemIcon,
+  rateLabel,
+  satisfaction,
+}: Props) {
   const isLeft = side === 'left';
   const { getEdges, deleteElements } = useReactFlow();
 
@@ -26,6 +36,8 @@ export default function ItemHandle({ id, nodeId, side, itemName, itemIcon, rateL
       void deleteElements({ edges: attached.map((e) => ({ id: e.id })) });
     }
   };
+
+  const isShort = satisfaction != null && satisfaction < 1 - FLOW_EPS;
 
   return (
     <div
@@ -45,7 +57,16 @@ export default function ItemHandle({ id, nodeId, side, itemName, itemIcon, rateL
           style={{ top: 0, left: 0, right: 'auto', bottom: 'auto', transform: 'none' }}
         />
       </div>
-      {rateLabel && <span className="text-[10px] text-[#6b7388]">{rateLabel}</span>}
+      {rateLabel && (
+        <span className="text-[10px] text-[#6b7388]">
+          {rateLabel}
+          {isShort && (
+            <span className="ml-1 text-orange-400">
+              ({Math.round((satisfaction ?? 0) * 100)}%)
+            </span>
+          )}
+        </span>
+      )}
     </div>
   );
 }

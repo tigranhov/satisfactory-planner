@@ -21,7 +21,7 @@ import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
 import CompositeNode from './nodes/CompositeNode';
 import RateEdge from './edges/RateEdge';
-import { computeEdgeFlows } from '@/models/flow';
+import { computeFlows, type HandleFlow } from '@/models/flow';
 import type { Graph, GraphEdge } from '@/models/graph';
 
 const gameData = loadGameData();
@@ -30,15 +30,20 @@ const nodeTypes = { recipe: RecipeNode, composite: CompositeNode };
 const edgeTypes = { rate: RateEdge };
 
 function graphToFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = graph.nodes.map((n) => ({
-    id: n.id,
-    position: n.position,
-    type: n.data.kind,
-    data: n.data as unknown as Record<string, unknown>,
-  }));
-  const flows = computeEdgeFlows(graph, gameData);
+  const flows = computeFlows(graph, gameData);
+  const nodes: Node[] = graph.nodes.map((n) => {
+    const handleMap = flows.targetHandles.get(n.id);
+    const handleFlows: Record<string, HandleFlow> = {};
+    if (handleMap) for (const [hid, hf] of handleMap) handleFlows[hid] = hf;
+    return {
+      id: n.id,
+      position: n.position,
+      type: n.data.kind,
+      data: { ...(n.data as unknown as Record<string, unknown>), handleFlows },
+    };
+  });
   const edges: Edge[] = graph.edges.map((e) => {
-    const flow = flows.get(e.id);
+    const flow = flows.edges.get(e.id);
     return {
       id: e.id,
       source: e.source,
@@ -46,7 +51,12 @@ function graphToFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
       target: e.target,
       targetHandle: e.targetHandle,
       type: 'rate',
-      data: { rate: flow?.rate ?? 0, overbudget: flow?.overbudget ?? false, itemId: e.itemId },
+      data: {
+        rate: flow?.rate ?? 0,
+        satisfaction: flow?.satisfaction ?? 1,
+        sourceUtilization: flow?.sourceUtilization ?? 0,
+        itemId: e.itemId,
+      },
     };
   });
   return { nodes, edges };
