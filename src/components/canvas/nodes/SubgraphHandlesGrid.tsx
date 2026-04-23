@@ -25,7 +25,7 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
   const { inputNodes, outputNodes } = rates;
 
   const renderItem = (fallback: string, data: InterfaceNodeData) => {
-    const item = gameData.items[data.itemId];
+    const item = data.itemId ? gameData.items[data.itemId] : undefined;
     return {
       item,
       name: item?.name ?? data.itemId ?? fallback,
@@ -41,6 +41,7 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
         )}
         {inputNodes.map((n) => {
           const iface = n.data as InterfaceNodeData;
+          if (!iface.itemId) return null;
           const { name, icon } = renderItem('input', iface);
           const rate = (rates.inputs.get(n.id) ?? 0) * count;
           const handleId = handleIdForSubgraphInput(n.id, iface.itemId);
@@ -64,6 +65,7 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
         )}
         {outputNodes.map((n) => {
           const iface = n.data as InterfaceNodeData;
+          if (!iface.itemId) return null;
           const { name, icon } = renderItem('output', iface);
           const rate = (rates.outputs.get(n.id) ?? 0) * count;
           return (

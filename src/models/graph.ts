@@ -28,9 +28,13 @@ export interface FactoryNodeData {
   label: string;
 }
 
+// Input/Output boundary nodes start itemless (like hub-likes) and commit
+// to a specific item the first time they're connected. Once committed,
+// `itemId` is persisted so handle ids stay stable and the subgraph surface
+// can expose them as typed ports.
 export interface InterfaceNodeData {
   kind: 'input' | 'output';
-  itemId: ItemId;
+  itemId?: ItemId;
   label?: string;
 }
 

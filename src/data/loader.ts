@@ -29,6 +29,7 @@ let sortedRecipeList: Recipe[] = [];
 let sortedItemList: Item[] = [];
 let itemNameLower: Map<string, string> = new Map();
 let recipeNameLower: Map<string, string> = new Map();
+let itemByNameLower: Map<string, Item> = new Map();
 
 function rebuildIndices(d: GameData) {
   if (indexKey === d) return;
@@ -40,6 +41,7 @@ function rebuildIndices(d: GameData) {
   itemsByCategory = {};
   itemNameLower = new Map();
   recipeNameLower = new Map();
+  itemByNameLower = new Map();
 
   for (const recipe of Object.values(d.recipes)) {
     recipeNameLower.set(recipe.id, recipe.name.toLowerCase());
@@ -59,7 +61,9 @@ function rebuildIndices(d: GameData) {
   }
 
   for (const item of Object.values(d.items)) {
-    itemNameLower.set(item.id, item.name.toLowerCase());
+    const lower = item.name.toLowerCase();
+    itemNameLower.set(item.id, lower);
+    itemByNameLower.set(lower, item);
     const cat = item.category ?? 'other';
     (itemsByCategory[cat] ??= []).push(item);
   }
@@ -104,6 +108,16 @@ export function getItemsByCategory(d: GameData): Record<string, Item[]> {
 export function getAllItemsSorted(d: GameData): Item[] {
   rebuildIndices(d);
   return sortedItemList;
+}
+
+// Case-insensitive name match first, then item id fallback. Used by the
+// `::Iron Ore::` inline icon markup where users type a display name but
+// ids are the stable key when names collide or shift.
+export function getItemByNameOrId(d: GameData, token: string): Item | undefined {
+  rebuildIndices(d);
+  const trimmed = token.trim();
+  if (!trimmed) return undefined;
+  return itemByNameLower.get(trimmed.toLowerCase()) ?? d.items[trimmed];
 }
 
 export function searchRecipes(d: GameData, query: string): Recipe[] {

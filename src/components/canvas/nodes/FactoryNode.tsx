@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Layers } from 'lucide-react';
 import SubgraphHandlesGrid from './SubgraphHandlesGrid';
+import InlineItemText from '@/components/ui/InlineItemText';
 import { loadGameData } from '@/data/loader';
 import { useGraphStore } from '@/store/graphStore';
 import { graphInterfaceRates } from '@/models/flow';
@@ -36,7 +37,9 @@ function FactoryNode({ id, data, selected }: NodeProps) {
     >
       <div className="flex items-center gap-2 rounded-t-md border-b border-border bg-panel-hi px-3 py-1.5">
         <Layers className="h-4 w-4 shrink-0 text-accent" />
-        <span className="truncate font-medium">{nodeData.label}</span>
+        <span className="truncate font-medium">
+          <InlineItemText text={nodeData.label} />
+        </span>
       </div>
       <SubgraphHandlesGrid nodeId={id} rates={rates} count={1} handleFlows={nodeData.handleFlows} />
       <div className="rounded-b-md border-t border-border bg-panel-hi px-3 py-1 text-[10px] text-[#6b7388]">

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
+  LogIn,
+  LogOut,
   Merge,
   Package,
   Search,
@@ -10,7 +10,7 @@ import {
   Waypoints,
   Wrench,
 } from 'lucide-react';
-import { loadGameData, getAllItemsSorted, getRecipesProducing } from '@/data/loader';
+import { loadGameData, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
@@ -32,9 +32,7 @@ const gameProducibleItems: Item[] = (() => {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 })();
 
-const allItems: Item[] = getAllItemsSorted(gameData);
-
-type Mode = 'recipe' | 'blueprint' | 'input' | 'output';
+type Mode = 'recipe' | 'blueprint';
 
 type RecipeRow = { kind: 'recipe'; recipe: Recipe };
 type BlueprintRow = { kind: 'blueprint'; bp: Blueprint };
@@ -43,8 +41,7 @@ type ItemRow = { kind: 'item'; item: Item };
 type RecipePickRow = RecipeRow | BlueprintRow;
 type TopRow = ItemRow | BlueprintRow;
 
-// Precomputed item-row arrays — constant across the app lifetime.
-const allItemRows: TopRow[] = allItems.map<TopRow>((item) => ({ kind: 'item', item }));
+// Precomputed item-row array — constant across the app lifetime.
 const recipeItemRows: TopRow[] = gameProducibleItems.map<TopRow>((item) => ({ kind: 'item', item }));
 
 interface Props {
@@ -53,10 +50,10 @@ interface Props {
   onClose: () => void;
   onSelectRecipe: (recipeId: string, flowPosition: { x: number; y: number }) => void;
   onSelectBlueprint?: (blueprintId: string, flowPosition: { x: number; y: number }) => void;
+  // Input/Output boundary nodes are only meaningful inside a subgraph.
   allowInterface?: boolean;
-  onSelectInterface?: (
+  onAddInterface?: (
     kind: 'input' | 'output',
-    itemId: string,
     flowPosition: { x: number; y: number },
   ) => void;
   // Utility nodes (hub / splitter / merger) place instantly from the
@@ -71,6 +68,21 @@ const HUBLIKE_BUTTONS = [
   { kind: 'hub' as const, icon: Waypoints, title: 'Add Hub', hoverClass: 'hover:text-amber-300' },
   { kind: 'splitter' as const, icon: Split, title: 'Add Splitter (1 → 3)', hoverClass: 'hover:text-cyan-300' },
   { kind: 'merger' as const, icon: Merge, title: 'Add Merger (3 → 1)', hoverClass: 'hover:text-cyan-300' },
+];
+
+const INTERFACE_BUTTONS = [
+  {
+    kind: 'input' as const,
+    icon: LogIn,
+    title: 'Add Input (connect to set type)',
+    hoverClass: 'hover:text-sky-300',
+  },
+  {
+    kind: 'output' as const,
+    icon: LogOut,
+    title: 'Add Output (connect to set type)',
+    hoverClass: 'hover:text-fuchsia-300',
+  },
 ];
 
 function filterByName(rows: TopRow[], query: string): TopRow[] {
@@ -89,7 +101,7 @@ export default function CanvasContextMenu({
   onSelectRecipe,
   onSelectBlueprint,
   allowInterface = false,
-  onSelectInterface,
+  onAddInterface,
   onAddHublike,
 }: Props) {
   const [mode, setMode] = useState<Mode>('recipe');
@@ -120,7 +132,7 @@ export default function CanvasContextMenu({
     for (const bp of placeableBlueprints) {
       const outputs = new Set<string>();
       for (const n of bp.nodes) {
-        if (n.data.kind === 'output') outputs.add(n.data.itemId);
+        if (n.data.kind === 'output' && n.data.itemId) outputs.add(n.data.itemId);
       }
       for (const itemId of outputs) {
         const arr = map.get(itemId) ?? [];
@@ -139,24 +151,18 @@ export default function CanvasContextMenu({
   const rowsByMode: Record<Mode, TopRow[]> = {
     recipe: recipeItemRows,
     blueprint: blueprintRows,
-    input: allItemRows,
-    output: allItemRows,
   };
 
-  // Input/Output tabs are hidden when allowInterface is false — skip filtering
-  // their ~200-item arrays on every keystroke in that case.
-  const filteredByMode = useMemo<Record<Mode, TopRow[]>>(() => {
-    const empty: TopRow[] = [];
-    return {
+  const filteredByMode = useMemo<Record<Mode, TopRow[]>>(
+    () => ({
       recipe: filterByName(rowsByMode.recipe, query),
       blueprint: filterByName(rowsByMode.blueprint, query),
-      input: allowInterface ? filterByName(rowsByMode.input, query) : empty,
-      output: allowInterface ? filterByName(rowsByMode.output, query) : empty,
-    };
+    }),
     // rowsByMode is a plain object rebuilt every render; depending on its
     // source arrays avoids unnecessary filter runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blueprintRows, query, allowInterface]);
+    [blueprintRows, query],
+  );
 
   const filteredTopRows = filteredByMode[mode];
 
@@ -221,22 +227,16 @@ export default function CanvasContextMenu({
   }, [activeIndex]);
 
   const pickItemRow = (item: Item) => {
-    if (mode === 'recipe') {
-      const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
-      const bps = blueprintsByOutputItem.get(item.id) ?? [];
-      const total = recipes.length + bps.length;
-      if (total === 1) {
-        if (bps.length === 1) onSelectBlueprint?.(bps[0].id, flowPosition);
-        else onSelectRecipe(recipes[0].id, flowPosition);
-        return;
-      }
-      setSelectedItem(item);
-      setQuery('');
+    const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
+    const bps = blueprintsByOutputItem.get(item.id) ?? [];
+    const total = recipes.length + bps.length;
+    if (total === 1) {
+      if (bps.length === 1) onSelectBlueprint?.(bps[0].id, flowPosition);
+      else onSelectRecipe(recipes[0].id, flowPosition);
       return;
     }
-    if (mode === 'input' || mode === 'output') {
-      onSelectInterface?.(mode, item.id, flowPosition);
-    }
+    setSelectedItem(item);
+    setQuery('');
   };
 
   const pickTopRow = (row: TopRow) => {
@@ -294,8 +294,6 @@ export default function CanvasContextMenu({
   const MODE_PLACEHOLDER: Record<Mode, string> = {
     recipe: 'Search items...',
     blueprint: 'Search blueprints...',
-    input: 'Search items for Input...',
-    output: 'Search items for Output...',
   };
   const searchPlaceholder = showingRecipes
     ? 'Filter recipes and blueprints...'
@@ -304,8 +302,6 @@ export default function CanvasContextMenu({
   const MODE_HEADER: Record<Mode, string> = {
     recipe: 'Add recipe',
     blueprint: 'Add blueprint',
-    input: 'Add input',
-    output: 'Add output',
   };
 
   return (
@@ -336,26 +332,6 @@ export default function CanvasContextMenu({
           >
             Blueprint
           </ModeButton>
-          {allowInterface && (
-            <>
-              <ModeButton
-                current={mode}
-                value="input"
-                onSelect={setMode}
-                icon={<ArrowRightFromLine className="h-3 w-3" />}
-              >
-                Input
-              </ModeButton>
-              <ModeButton
-                current={mode}
-                value="output"
-                onSelect={setMode}
-                icon={<ArrowLeftFromLine className="h-3 w-3" />}
-              >
-                Output
-              </ModeButton>
-            </>
-          )}
         </div>
       )}
 
@@ -466,6 +442,24 @@ export default function CanvasContextMenu({
             <Icon className="h-4 w-4" />
           </button>
         ))}
+        {allowInterface && (
+          <>
+            <div className="my-0.5 h-px w-5 bg-border" />
+            {INTERFACE_BUTTONS.map(({ kind, icon: Icon, title, hoverClass }) => (
+              <button
+                key={kind}
+                onClick={() => {
+                  onAddInterface?.(kind, flowPosition);
+                  onClose();
+                }}
+                title={title}
+                className={`flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel ${hoverClass}`}
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
@@ -479,7 +473,7 @@ interface PickerRowProps {
   children: React.ReactNode;
 }
 
-function PickerRow({ index, active, onHover, onPick, children }: PickerRowProps) {
+export function PickerRow({ index, active, onHover, onPick, children }: PickerRowProps) {
   return (
     <button
       data-index={index}
@@ -568,32 +562,48 @@ interface BlueprintRowProps {
   onPick: () => void;
 }
 
-function BlueprintRowButton({ bp, index, active, onHover, onPick }: BlueprintRowProps) {
-  const inputNames: string[] = [];
-  const outputNames: string[] = [];
+export function BlueprintRowButton({ bp, index, active, onHover, onPick }: BlueprintRowProps) {
+  const inputItems: Item[] = [];
+  const outputItems: Item[] = [];
   for (const n of bp.nodes) {
-    if (n.data.kind === 'input') {
-      inputNames.push(gameData.items[n.data.itemId]?.name ?? n.data.itemId);
-    } else if (n.data.kind === 'output') {
-      outputNames.push(gameData.items[n.data.itemId]?.name ?? n.data.itemId);
-    }
+    if (n.data.kind !== 'input' && n.data.kind !== 'output') continue;
+    if (!n.data.itemId) continue;
+    const item = gameData.items[n.data.itemId];
+    if (!item) continue;
+    if (n.data.kind === 'input') inputItems.push(item);
+    else outputItems.push(item);
   }
+  // Explicit override first; else the first output item; else fall back to the
+  // generic package glyph below.
+  const primary =
+    (bp.iconItemId && gameData.items[bp.iconItemId]) || outputItems[0] || inputItems[0];
+
   return (
     <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
-      <Package className="h-5 w-5 shrink-0 text-sky-300" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate">{bp.name}</span>
-          <span className="shrink-0 rounded border border-sky-400/60 bg-sky-500/10 px-1 text-[9px] font-semibold uppercase tracking-wider text-sky-300">
-            BP
-          </span>
+      {primary ? (
+        <IconOrLabel iconBasename={primary.icon} name={primary.name} />
+      ) : (
+        <Package className="h-5 w-5 shrink-0 text-sky-300" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{bp.name}</span>
+      {inputItems.length > 0 && (
+        <div
+          className="flex shrink-0 items-center gap-0.5 border-l border-border pl-1.5"
+          title={`Inputs: ${inputItems.map((i) => i.name).join(', ')}`}
+        >
+          {inputItems.map((item, i) => (
+            <IconOrLabel
+              key={`${item.id}-${i}`}
+              iconBasename={item.icon}
+              name={item.name}
+              className="h-4 w-4 shrink-0 rounded"
+            />
+          ))}
         </div>
-        <div className="truncate text-[10px] text-[#6b7388]">
-          {inputNames.join(' + ') || '—'}
-          {' → '}
-          {outputNames.join(' + ') || '—'}
-        </div>
-      </div>
+      )}
+      <span className="shrink-0 rounded border border-sky-400/60 bg-sky-500/10 px-1 text-[9px] font-semibold uppercase tracking-wider text-sky-300">
+        BP
+      </span>
     </PickerRow>
   );
 }

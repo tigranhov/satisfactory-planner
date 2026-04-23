@@ -4,6 +4,7 @@ import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
 import { nodePowerMW, type HublikeKind } from '@/models/factory';
 import PowerReadout from '@/components/canvas/editors/PowerReadout';
+import InlineItemText from '@/components/ui/InlineItemText';
 
 const gameData = loadGameData();
 
@@ -138,7 +139,7 @@ export default function Inspector({ selectedNodeId }: Props) {
         />
         {bp?.description && (
           <div className="mt-2 border-t border-border pt-2 text-xs text-[#9aa2b8]">
-            {bp.description}
+            <InlineItemText text={bp.description} />
           </div>
         )}
       </div>
@@ -154,9 +155,13 @@ export default function Inspector({ selectedNodeId }: Props) {
     );
   }
 
+  const itemName = node.data.itemId
+    ? gameData.items[node.data.itemId]?.name ?? node.data.itemId
+    : null;
   return (
     <div className="border-l border-border bg-panel p-4 text-sm text-[#6b7388]">
-      Interface node ({node.data.kind}): {node.data.itemId}
+      {node.data.kind === 'input' ? 'Input' : 'Output'} node —{' '}
+      {itemName ? `carries ${itemName}.` : 'connect it to set its item type.'}
     </div>
   );
 }

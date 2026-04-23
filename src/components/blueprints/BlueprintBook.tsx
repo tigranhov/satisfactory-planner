@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, MapPin, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Copy, MapPin, MoreVertical, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { loadGameData } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
+import InlineItemText from '@/components/ui/InlineItemText';
 import {
   openBlueprintForEditing,
   placeBlueprintOnActiveGraph,
@@ -20,7 +22,7 @@ function deriveIcon(bp: Blueprint): { iconBasename?: string; name: string } {
   const explicit = bp.iconItemId ? gameData.items[bp.iconItemId] : undefined;
   if (explicit) return { iconBasename: explicit.icon, name: explicit.name };
   const outputNode = bp.nodes.find((n) => n.data.kind === 'output');
-  if (outputNode && outputNode.data.kind === 'output') {
+  if (outputNode && outputNode.data.kind === 'output' && outputNode.data.itemId) {
     const item = gameData.items[outputNode.data.itemId];
     if (item) return { iconBasename: item.icon, name: item.name };
   }
@@ -129,7 +131,7 @@ export default function BlueprintBook({ open, onClose }: Props) {
             </div>
           )}
           {loaded && list.length > 0 && (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
               {list.map((bp) => (
                 <BlueprintCard key={bp.id} blueprint={bp} onClose={onClose} />
               ))}
@@ -157,6 +159,10 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(blueprint.description ?? '');
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  usePopoverDismiss(menuRef, () => setMenuOpen(false), { escape: true });
 
   useEffect(() => {
     if (editingName) nameInputRef.current?.select();
@@ -209,7 +215,7 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
   const nodeCount = blueprint.nodes.length;
 
   return (
-    <div className="group flex flex-col gap-2 rounded-md border border-border bg-panel-hi p-3 hover:border-accent/50">
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-panel-hi p-3 hover:border-accent/50">
       <div className="flex items-start gap-2">
         <IconOrLabel
           iconBasename={icon.iconBasename}
@@ -248,41 +254,56 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
             {nodeCount === 0 ? 'Empty' : `${nodeCount} node${nodeCount === 1 ? '' : 's'}`}
           </div>
         </div>
-        <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+        <div ref={menuRef} className="relative shrink-0">
           <button
-            onClick={() => {
-              const added = placeBlueprintOnActiveGraph(blueprint.id);
-              if (added) onClose();
-            }}
-            className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
-            title="Place on canvas"
-          >
-            <MapPin className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => {
-              openBlueprintForEditing(blueprint.id);
-              onClose();
-            }}
-            className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
-            title="Edit internals"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={duplicate}
+            onClick={() => setMenuOpen((v) => !v)}
             className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"
-            title="Duplicate"
+            title="Actions"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <MoreVertical className="h-4 w-4" />
           </button>
-          <button
-            onClick={del}
-            className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-red-400"
-            title="Delete"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-20 mt-1 w-[160px] overflow-hidden rounded-md border border-border bg-panel shadow-xl">
+              <MenuItem
+                icon={<MapPin className="h-3.5 w-3.5" />}
+                hoverClass="hover:text-accent"
+                label="Place on canvas"
+                onClick={() => {
+                  setMenuOpen(false);
+                  const added = placeBlueprintOnActiveGraph(blueprint.id);
+                  if (added) onClose();
+                }}
+              />
+              <MenuItem
+                icon={<Pencil className="h-3.5 w-3.5" />}
+                hoverClass="hover:text-accent"
+                label="Edit internals"
+                onClick={() => {
+                  setMenuOpen(false);
+                  openBlueprintForEditing(blueprint.id);
+                  onClose();
+                }}
+              />
+              <MenuItem
+                icon={<Copy className="h-3.5 w-3.5" />}
+                hoverClass="hover:text-[#e6e8ee]"
+                label="Duplicate"
+                onClick={() => {
+                  setMenuOpen(false);
+                  duplicate();
+                }}
+              />
+              <MenuItem
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                hoverClass="hover:text-red-400"
+                label="Delete"
+                onClick={() => {
+                  setMenuOpen(false);
+                  del();
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -305,7 +326,11 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
           className="text-left text-[11px] text-[#9aa2b8] hover:text-[#e6e8ee]"
           title="Click to edit description"
         >
-          {blueprint.description || <span className="italic text-[#6b7388]">Add description...</span>}
+          {blueprint.description ? (
+            <InlineItemText text={blueprint.description} />
+          ) : (
+            <span className="italic text-[#6b7388]">Add description...</span>
+          )}
         </button>
       )}
 
@@ -317,5 +342,24 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
         className="rounded border border-border bg-panel px-1.5 py-0.5 text-[10px] outline-none focus:border-accent"
       />
     </div>
+  );
+}
+
+interface MenuItemProps {
+  icon: React.ReactNode;
+  label: string;
+  hoverClass: string;
+  onClick: () => void;
+}
+
+function MenuItem({ icon, label, hoverClass, onClick }: MenuItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-[#9aa2b8] hover:bg-panel-hi ${hoverClass}`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }

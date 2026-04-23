@@ -28,13 +28,21 @@ import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import EdgeContextMenu from './EdgeContextMenu';
+import DragDropMenu, { type DragDropChoice } from './DragDropMenu';
 import { computeFlows, type HandleFlow, type SubgraphResolver } from '@/models/flow';
 import { useSubgraphResolver } from '@/hooks/useSubgraphResolver';
 import {
-  hublikeItemFromEdges,
+  HUB_IN_HANDLE,
+  HUB_OUT_HANDLE,
+  MERGER_IN_HANDLES,
+  MERGER_OUT_HANDLE,
+  SPLITTER_IN_HANDLE,
+  SPLITTER_OUT_HANDLES,
+  handleIdForIngredient,
+  handleIdForInterface,
+  handleIdForProduct,
   isHublikeKind,
-  itemIdFromSourceHandle,
-  itemIdFromTargetHandle,
+  itemIdForHandle,
   itemsPerMinute,
   nodePowerMW,
   somersloopMultiplier,
@@ -72,16 +80,23 @@ function isEditableTarget(el: EventTarget | null): boolean {
 
 const gameData = loadGameData();
 
+// React Flow reserves the type names `input`, `output`, and `default` for its
+// built-in node variants (they ship with light-theme styling). Route both
+// of our interface kinds through an `interface` key instead so the defaults
+// don't render as a white backplate under our node.
 const nodeTypes = {
   recipe: RecipeNode,
   factory: FactoryNode,
-  input: InterfaceNode,
-  output: InterfaceNode,
+  interface: InterfaceNode,
   blueprint: BlueprintNode,
   hub: HubNode,
   splitter: SplitterNode,
   merger: MergerNode,
 };
+
+function reactFlowTypeForKind(kind: NodeData['kind']): string {
+  return kind === 'input' || kind === 'output' ? 'interface' : kind;
+}
 const edgeTypes = { rate: RateEdge };
 
 function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[]; edges: Edge[] } {
@@ -107,7 +122,7 @@ function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[];
     return {
       id: n.id,
       position: n.position,
-      type: n.data.kind,
+      type: reactFlowTypeForKind(n.data.kind),
       data: { ...(n.data as unknown as Record<string, unknown>), ...extra },
     };
   });
@@ -166,6 +181,22 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     screen: { x: number; y: number };
     edgeId: string;
   } | null>(null);
+  const [dragMenu, setDragMenu] = useState<{
+    screen: { x: number; y: number };
+    flow: { x: number; y: number };
+    sourceNodeId: string;
+    sourceHandleId: string | null;
+    sourceHandleType: 'source' | 'target';
+    itemId: string;
+  } | null>(null);
+  // Tracks a drag in progress from a handle. Set in onConnectStart, cleared
+  // when a valid connection lands (onConnect) or we finish handling the
+  // drop on pane (onConnectEnd).
+  const pendingConnectRef = useRef<{
+    nodeId: string;
+    handleId: string | null;
+    handleType: 'source' | 'target';
+  } | null>(null);
   const cursorFlowRef = useRef<{ x: number; y: number } | null>(null);
   const nodesRef = useRef<Node[]>([]);
   nodesRef.current = nodes;
@@ -210,42 +241,116 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [activeGraphId, store],
   );
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      if (!connection.source || !connection.target) return;
+  // Resolves item consistency, commits a fresh interface node's itemId on
+  // its first connection (rewriting its handle id in the process), and
+  // creates the edge. Shared between the normal `onConnect` path and the
+  // drag-drop menu's auto-connect path.
+  const commitAndAddEdge = useCallback(
+    (
+      connection: {
+        source: string;
+        sourceHandle: string | null | undefined;
+        target: string;
+        targetHandle: string | null | undefined;
+      },
+    ) => {
       const g = store.getState().graphs[activeGraphId];
-      if (!g) return;
-      // Endpoint itemIds come from the handle string for fixed-item nodes
-      // (recipes, interface boundaries, subgraphs). For hub-likes (hub /
-      // splitter / merger) — whose item is derived from incident edges —
-      // we look at the node's existing connections. Empty string means
-      // "no item committed yet".
+      if (!g) return false;
       const sourceNode = g.nodes.find((n) => n.id === connection.source);
       const targetNode = g.nodes.find((n) => n.id === connection.target);
-      const sourceItemId =
-        sourceNode && isHublikeKind(sourceNode.data.kind)
-          ? hublikeItemFromEdges(g, sourceNode.id) ?? ''
-          : itemIdFromSourceHandle(connection.sourceHandle ?? '');
-      const targetItemId =
-        targetNode && isHublikeKind(targetNode.data.kind)
-          ? hublikeItemFromEdges(g, targetNode.id) ?? ''
-          : itemIdFromTargetHandle(connection.targetHandle ?? '');
-      // Reject connections where both ends disagree on item.
-      if (sourceItemId && targetItemId && sourceItemId !== targetItemId) return;
-      // Reject two unset hub-likes connected together — no item to carry.
+      if (!sourceNode || !targetNode) return false;
+      const sourceItemId = itemIdForHandle(g, sourceNode, connection.sourceHandle, 'source');
+      const targetItemId = itemIdForHandle(g, targetNode, connection.targetHandle, 'target');
+      if (sourceItemId && targetItemId && sourceItemId !== targetItemId) return false;
       const itemId = sourceItemId || targetItemId;
-      if (!itemId) return;
-      const newEdge: Omit<GraphEdge, 'id'> = {
+      if (!itemId) return false;
+
+      let sourceHandle = connection.sourceHandle ?? '';
+      let targetHandle = connection.targetHandle ?? '';
+      if (
+        (sourceNode.data.kind === 'input' || sourceNode.data.kind === 'output') &&
+        !sourceNode.data.itemId
+      ) {
+        store.getState().updateNode(activeGraphId, sourceNode.id, {
+          data: { ...sourceNode.data, itemId },
+        });
+        sourceHandle = handleIdForInterface(sourceNode.data.kind, itemId);
+      }
+      if (
+        (targetNode.data.kind === 'input' || targetNode.data.kind === 'output') &&
+        !targetNode.data.itemId
+      ) {
+        store.getState().updateNode(activeGraphId, targetNode.id, {
+          data: { ...targetNode.data, itemId },
+        });
+        targetHandle = handleIdForInterface(targetNode.data.kind, itemId);
+      }
+
+      store.getState().addEdge(activeGraphId, {
         source: connection.source,
-        sourceHandle: connection.sourceHandle ?? '',
+        sourceHandle,
         target: connection.target,
-        targetHandle: connection.targetHandle ?? '',
+        targetHandle,
         itemId,
         rate: 0,
-      };
-      store.getState().addEdge(activeGraphId, newEdge);
+      });
+      return true;
     },
     [activeGraphId, store],
+  );
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      pendingConnectRef.current = null;
+      if (!connection.source || !connection.target) return;
+      commitAndAddEdge({
+        source: connection.source,
+        sourceHandle: connection.sourceHandle,
+        target: connection.target,
+        targetHandle: connection.targetHandle,
+      });
+    },
+    [commitAndAddEdge],
+  );
+
+  const onConnectStart = useCallback<NonNullable<React.ComponentProps<typeof ReactFlow>['onConnectStart']>>(
+    (_event, { nodeId, handleId, handleType }) => {
+      if (!nodeId || !handleType) return;
+      pendingConnectRef.current = { nodeId, handleId: handleId ?? null, handleType };
+    },
+    [],
+  );
+
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      const pending = pendingConnectRef.current;
+      pendingConnectRef.current = null;
+      if (!pending) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (!target.classList.contains('react-flow__pane')) return;
+
+      const clientX =
+        'clientX' in event ? event.clientX : event.changedTouches?.[0]?.clientX ?? 0;
+      const clientY =
+        'clientY' in event ? event.clientY : event.changedTouches?.[0]?.clientY ?? 0;
+
+      const g = store.getState().graphs[activeGraphId];
+      if (!g) return;
+      const sourceNode = g.nodes.find((n) => n.id === pending.nodeId);
+      if (!sourceNode) return;
+      const itemId = itemIdForHandle(g, sourceNode, pending.handleId, pending.handleType);
+
+      setDragMenu({
+        screen: { x: clientX, y: clientY },
+        flow: screenToFlowPosition({ x: clientX, y: clientY }),
+        sourceNodeId: pending.nodeId,
+        sourceHandleId: pending.handleId,
+        sourceHandleType: pending.handleType,
+        itemId,
+      });
+    },
+    [activeGraphId, screenToFlowPosition, store],
   );
 
   const onSelectionChange = useCallback(
@@ -292,10 +397,9 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [activeGraphId, store],
   );
 
-  const onPickInterface = useCallback(
-    (kind: 'input' | 'output', itemId: string, position: { x: number; y: number }) => {
-      if (!gameData.items[itemId]) return;
-      store.getState().addNode(activeGraphId, position, { kind, itemId });
+  const onAddInterface = useCallback(
+    (kind: 'input' | 'output', position: { x: number; y: number }) => {
+      store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
     [activeGraphId, store],
@@ -315,6 +419,76 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       setMenu(null);
     },
     [activeGraphId, store],
+  );
+
+  // Place a new node at the drop position and wire it to the dragged handle
+  // via the shared commitAndAddEdge path. For interface / hub-likes that
+  // land without a committed item, the unset handle form is used —
+  // commitAndAddEdge will itemize it on the first connection.
+  const onDragDropPick = useCallback(
+    (choice: DragDropChoice) => {
+      if (!dragMenu) return;
+      const { flow, sourceNodeId, sourceHandleId, sourceHandleType, itemId } = dragMenu;
+      const isFromSource = sourceHandleType === 'source';
+
+      let data: NodeData | null = null;
+      let newHandle = '';
+      if (choice.kind === 'recipe') {
+        const recipe = gameData.recipes[choice.recipeId];
+        if (!recipe) return;
+        data = { kind: 'recipe', recipeId: choice.recipeId, clockSpeed: 1, count: 1, somersloops: 0 };
+        if (isFromSource) {
+          const idx = recipe.ingredients.findIndex((i) => i.itemId === itemId);
+          if (idx < 0) return;
+          newHandle = handleIdForIngredient(recipe.id, itemId, idx);
+        } else {
+          const idx = recipe.products.findIndex((p) => p.itemId === itemId);
+          if (idx < 0) return;
+          newHandle = handleIdForProduct(recipe.id, itemId, idx);
+        }
+      } else if (choice.kind === 'blueprint') {
+        // Blueprint placement doesn't return a synchronous node id we can
+        // wire into a new edge — drop the blueprint at the cursor and
+        // leave the auto-connect as a follow-up.
+        placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+        setDragMenu(null);
+        return;
+      } else if (choice.kind === 'hublike') {
+        data = { kind: choice.which };
+        if (choice.which === 'hub') {
+          newHandle = isFromSource ? HUB_IN_HANDLE : HUB_OUT_HANDLE;
+        } else if (choice.which === 'splitter') {
+          newHandle = isFromSource ? SPLITTER_IN_HANDLE : SPLITTER_OUT_HANDLES[0];
+        } else {
+          newHandle = isFromSource ? MERGER_IN_HANDLES[0] : MERGER_OUT_HANDLE;
+        }
+      } else {
+        data = { kind: choice.which };
+        newHandle = handleIdForInterface(choice.which);
+      }
+
+      if (!data) return;
+      const newNodeId = store.getState().addNode(activeGraphId, flow, data);
+
+      if (isFromSource) {
+        commitAndAddEdge({
+          source: sourceNodeId,
+          sourceHandle: sourceHandleId,
+          target: newNodeId,
+          targetHandle: newHandle,
+        });
+      } else {
+        commitAndAddEdge({
+          source: newNodeId,
+          sourceHandle: newHandle,
+          target: sourceNodeId,
+          targetHandle: sourceHandleId,
+        });
+      }
+
+      setDragMenu(null);
+    },
+    [activeGraphId, commitAndAddEdge, dragMenu, store],
   );
 
   const isSubgraph = activeGraphId !== ROOT_GRAPH_ID;
@@ -549,6 +723,8 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
@@ -572,7 +748,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           onSelectRecipe={onPickRecipe}
           onSelectBlueprint={onPickBlueprint}
           allowInterface={isSubgraph}
-          onSelectInterface={onPickInterface}
+          onAddInterface={onAddInterface}
           onAddHublike={onAddHublike}
         />
       )}
@@ -629,6 +805,16 @@ export default function GraphCanvas({ onSelectNode }: Props) {
           screenPosition={edgeMenu.screen}
           onClose={() => setEdgeMenu(null)}
           onRemove={() => store.getState().removeEdge(activeGraphId, edgeMenu.edgeId)}
+        />
+      )}
+      {dragMenu && (
+        <DragDropMenu
+          screenPosition={dragMenu.screen}
+          itemId={dragMenu.itemId}
+          handleType={dragMenu.sourceHandleType}
+          allowInterface={isSubgraph}
+          onClose={() => setDragMenu(null)}
+          onPick={onDragDropPick}
         />
       )}
     </div>

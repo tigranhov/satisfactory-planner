@@ -18,6 +18,7 @@ import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import { useProjectStore } from '@/store/projectStore';
 import { newGraphId } from '@/lib/ids';
 import BlueprintBook from '@/components/blueprints/BlueprintBook';
+import InlineItemText from '@/components/ui/InlineItemText';
 import {
   createProjectPersistent,
   deleteProjectPersistent,
@@ -61,7 +62,7 @@ export default function TopBar() {
                   isLast ? 'text-accent' : 'text-[#e6e8ee]'
                 }`}
               >
-                {name}
+                <InlineItemText text={name} />
               </button>
               {!isLast && <ChevronRight className="h-4 w-4 text-[#6b7388]" />}
             </div>

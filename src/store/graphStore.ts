@@ -2,6 +2,35 @@ import { create } from 'zustand';
 import type { Graph, GraphEdge, GraphId, GraphNode, NodeData, NodeId } from '@/models/graph';
 import { newEdgeId, newGraphId, newNodeId, ROOT_GRAPH_ID } from '@/lib/ids';
 
+// Input/Output nodes commit to an itemId on their first connection. When the
+// last edge goes away, drop the commitment so the node can accept a different
+// item next time — mirrors the derived-from-edges behavior of hub-likes.
+function resetOrphanInterfaces(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
+  let hasCommittedInterface = false;
+  for (const n of nodes) {
+    if ((n.data.kind === 'input' || n.data.kind === 'output') && n.data.itemId) {
+      hasCommittedInterface = true;
+      break;
+    }
+  }
+  if (!hasCommittedInterface) return nodes;
+
+  const connected = new Set<NodeId>();
+  for (const e of edges) {
+    connected.add(e.source);
+    connected.add(e.target);
+  }
+  let changed = false;
+  const next = nodes.map((n) => {
+    if (n.data.kind !== 'input' && n.data.kind !== 'output') return n;
+    if (!n.data.itemId) return n;
+    if (connected.has(n.id)) return n;
+    changed = true;
+    return { ...n, data: { ...n.data, itemId: undefined } };
+  });
+  return changed ? next : nodes;
+}
+
 interface GraphState {
   graphs: Record<GraphId, Graph>;
   addGraph: (name: string, parentNodeId?: NodeId) => GraphId;
@@ -88,15 +117,13 @@ export const useGraphStore = create<GraphState>((set) => ({
     set((s) => {
       const g = s.graphs[graphId];
       if (!g) return s;
+      const nextEdges = g.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+      const nextNodes = resetOrphanInterfaces(
+        g.nodes.filter((n) => n.id !== nodeId),
+        nextEdges,
+      );
       return {
-        graphs: {
-          ...s.graphs,
-          [graphId]: {
-            ...g,
-            nodes: g.nodes.filter((n) => n.id !== nodeId),
-            edges: g.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-          },
-        },
+        graphs: { ...s.graphs, [graphId]: { ...g, nodes: nextNodes, edges: nextEdges } },
       };
     }),
 
@@ -116,8 +143,10 @@ export const useGraphStore = create<GraphState>((set) => ({
     set((s) => {
       const g = s.graphs[graphId];
       if (!g) return s;
+      const nextEdges = g.edges.filter((e) => e.id !== edgeId);
+      const nextNodes = resetOrphanInterfaces(g.nodes, nextEdges);
       return {
-        graphs: { ...s.graphs, [graphId]: { ...g, edges: g.edges.filter((e) => e.id !== edgeId) } },
+        graphs: { ...s.graphs, [graphId]: { ...g, nodes: nextNodes, edges: nextEdges } },
       };
     }),
 

@@ -1,5 +1,5 @@
 import type { GameData, Recipe } from '@/data/types';
-import type { Graph, NodeData, NodeId, RecipeNodeData } from './graph';
+import type { Graph, GraphNode, NodeData, NodeId, RecipeNodeData } from './graph';
 
 export function itemsPerMinute(recipe: Recipe, amount: number, clockSpeed = 1, count = 1) {
   return (amount * 60) / recipe.durationSec * clockSpeed * count;
@@ -74,9 +74,9 @@ export function handleIdForProduct(recipeId: string, itemId: string, index: numb
   return `${HANDLE_PREFIX.recipeOut}:${recipeId}:${itemId}:${index}`;
 }
 
-export function handleIdForInterface(kind: 'input' | 'output', itemId: string) {
+export function handleIdForInterface(kind: 'input' | 'output', itemId?: string) {
   const prefix = kind === 'input' ? HANDLE_PREFIX.ifaceIn : HANDLE_PREFIX.ifaceOut;
-  return `${prefix}:${itemId}`;
+  return itemId ? `${prefix}:${itemId}` : prefix;
 }
 
 export const HUB_IN_HANDLE = HANDLE_PREFIX.hubIn;
@@ -110,6 +110,27 @@ export function hublikeItemFromEdges(graph: Graph, nodeId: NodeId): string | nul
     if (e.source === nodeId || e.target === nodeId) return e.itemId || null;
   }
   return null;
+}
+
+// Resolve the item carried by a specific port on a specific node. Empty
+// string means "item is not yet committed" (disconnected hub-like or a
+// fresh Input/Output with no itemId set). Callers either filter by this
+// item (drag-drop menu) or validate connection endpoints against it.
+export function itemIdForHandle(
+  graph: Graph,
+  node: GraphNode,
+  handleId: string | null | undefined,
+  side: 'source' | 'target',
+): string {
+  if (isHublikeKind(node.data.kind)) {
+    return hublikeItemFromEdges(graph, node.id) ?? '';
+  }
+  if (node.data.kind === 'input' || node.data.kind === 'output') {
+    return node.data.itemId ?? '';
+  }
+  return side === 'source'
+    ? itemIdFromSourceHandle(handleId ?? '')
+    : itemIdFromTargetHandle(handleId ?? '');
 }
 
 // Subgraph-instance handles: blueprint and factory instance nodes share this
