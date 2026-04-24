@@ -6,6 +6,23 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-24
+
+### Added
+- Per-node task tracking. Right-click a node to tag it Planned (dashed amber
+  border) or Built (solid emerald border + check icon). Untagged nodes render
+  unchanged, so projects that don't engage with the feature see no visual
+  change.
+- Per-task notes. When a node is tagged, the context menu shows a small
+  textarea for a free-form description that surfaces as the task's subtitle
+  in the Tasks panel.
+- Collapsible Tasks panel, toggled from a new Tasks button in the top bar.
+  Lists every planned node across all graphs in the project grouped by graph
+  name. Each row click jumps to the graph and centers the canvas on the node;
+  a hover-revealed check button marks the task built in one click.
+- Progress readout in the Tasks panel header shows `Built: X / N tagged`
+  rolled up across the whole project.
+
 ## [0.5.0] - 2026-04-24
 
 ### Added
@@ -77,7 +94,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.2.0...v0.3.0
