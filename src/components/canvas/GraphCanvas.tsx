@@ -626,6 +626,16 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     setNodeMenu({ screen: { x: event.clientX, y: event.clientY }, nodeId: node.id });
   }, []);
 
+  // Shift-drag box selection renders a NodesSelection overlay that swallows
+  // right-clicks, so onNodeContextMenu never fires. Route those through the
+  // same menu using any selected node as the trigger — resolveTargets will
+  // expand to the full selection.
+  const onSelectionContextMenu = useCallback((event: React.MouseEvent, nodes: Node[]) => {
+    event.preventDefault();
+    if (nodes.length === 0) return;
+    setNodeMenu({ screen: { x: event.clientX, y: event.clientY }, nodeId: nodes[0].id });
+  }, []);
+
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
     event.stopPropagation();
@@ -728,6 +738,7 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
         deleteKeyCode={['Delete', 'Backspace']}
         proOptions={{ hideAttribution: true }}
