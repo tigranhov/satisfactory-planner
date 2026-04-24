@@ -5,6 +5,7 @@ import { clampMenuPosition } from '@/lib/popover';
 import CountEditor from './editors/CountEditor';
 import OverclockEditor from './editors/OverclockEditor';
 import SomersloopEditor from './editors/SomersloopEditor';
+import InlineItemText from '@/components/ui/InlineItemText';
 
 export interface RecipeControls {
   clockSpeed: number;
@@ -21,7 +22,13 @@ export interface RecipeControls {
 
 export interface BlueprintControls {
   count: number;
+  description?: string;
   onCount: (count: number) => void;
+}
+
+export interface FactoryControls {
+  label: string;
+  onLabelChange: (label: string) => void;
 }
 
 interface Props {
@@ -34,6 +41,7 @@ interface Props {
   onEdit?: () => void;
   recipe?: RecipeControls;
   blueprint?: BlueprintControls;
+  factory?: FactoryControls;
 }
 
 export default function NodeContextMenu({
@@ -46,13 +54,14 @@ export default function NodeContextMenu({
   onEdit,
   recipe,
   blueprint,
+  factory,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   usePopoverDismiss(rootRef, onClose, { escape: true });
 
   const MENU_W = 300;
   // Conservative upper bound for clamp positioning; real height is content-driven.
-  const MENU_H = recipe ? 360 : blueprint ? 120 : 48;
+  const MENU_H = recipe ? 360 : blueprint ? 160 : factory ? 96 : 48;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
   return (
@@ -135,7 +144,30 @@ export default function NodeContextMenu({
         </>
       )}
 
-      {blueprint && <CountEditor count={blueprint.count} onChange={blueprint.onCount} />}
+      {blueprint && (
+        <>
+          <CountEditor count={blueprint.count} onChange={blueprint.onCount} />
+          {blueprint.description && (
+            <div className="border-t border-border px-3 py-2 text-xs text-[#9aa2b8]">
+              <InlineItemText text={blueprint.description} />
+            </div>
+          )}
+        </>
+      )}
+
+      {factory && (
+        <div className="px-3 py-2">
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#6b7388]">
+            Name
+          </label>
+          <input
+            type="text"
+            value={factory.label}
+            onChange={(e) => factory.onLabelChange(e.target.value)}
+            className="w-full rounded border border-border bg-panel-hi px-2 py-1 text-sm outline-none focus:border-accent"
+          />
+        </div>
+      )}
     </div>
   );
 }

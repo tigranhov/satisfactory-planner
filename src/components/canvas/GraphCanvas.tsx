@@ -11,7 +11,6 @@ import {
   type Connection,
   type Edge,
   type Node,
-  type OnSelectionChangeParams,
 } from '@xyflow/react';
 import { useActiveGraph, useActiveGraphId } from '@/hooks/useActiveGraph';
 import { useGraphStore } from '@/store/graphStore';
@@ -99,6 +98,18 @@ function reactFlowTypeForKind(kind: NodeData['kind']): string {
 }
 const edgeTypes = { rate: RateEdge };
 
+function singleSelectedNodeOfKind<K extends NodeData['kind']>(
+  graph: Graph | undefined,
+  targets: Set<string>,
+  kind: K,
+): { nodeId: string; data: Extract<NodeData, { kind: K }> } | null {
+  if (targets.size !== 1) return null;
+  const only = [...targets][0];
+  const node = graph?.nodes.find((n) => n.id === only);
+  if (!node || node.data.kind !== kind) return null;
+  return { nodeId: only, data: node.data as Extract<NodeData, { kind: K }> };
+}
+
 function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[]; edges: Edge[] } {
   const flows = computeFlows(graph, gameData, resolver);
   // Single edge pass → hub-like item by node. Avoids scanning graph.edges
@@ -146,11 +157,7 @@ function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[];
   return { nodes, edges };
 }
 
-interface Props {
-  onSelectNode: (id: string | null) => void;
-}
-
-export default function GraphCanvas({ onSelectNode }: Props) {
+export default function GraphCanvas() {
   const activeGraphId = useActiveGraphId();
   const activeGraph = useActiveGraph();
   const resolver = useSubgraphResolver();
@@ -351,13 +358,6 @@ export default function GraphCanvas({ onSelectNode }: Props) {
       });
     },
     [activeGraphId, screenToFlowPosition, store],
-  );
-
-  const onSelectionChange = useCallback(
-    (params: OnSelectionChangeParams) => {
-      onSelectNode(params.nodes[0]?.id ?? null);
-    },
-    [onSelectNode],
   );
 
   const onNodeDoubleClick = useCallback(
@@ -644,28 +644,25 @@ export default function GraphCanvas({ onSelectNode }: Props) {
 
   const nodeMenuTargets = nodeMenu ? resolveTargets(nodeMenu.nodeId) : new Set<string>();
 
-  // Recipe controls only render when the context menu targets a single recipe node.
   const nodeMenuRecipe = (() => {
-    if (!nodeMenu || nodeMenuTargets.size !== 1) return null;
-    const only = [...nodeMenuTargets][0];
-    const node = activeGraph?.nodes.find((n) => n.id === only);
-    if (!node || node.data.kind !== 'recipe') return null;
-    const recipe = gameData.recipes[node.data.recipeId];
+    const base = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'recipe');
+    if (!base) return null;
+    const recipe = gameData.recipes[base.data.recipeId];
     if (!recipe) return null;
     const machine = gameData.machines[recipe.machineId];
     // Primary product = first non-byproduct; fall back to first product.
     const primary = recipe.products.find((p) => !p.isByproduct) ?? recipe.products[0];
     const primaryItem = primary ? gameData.items[primary.itemId] : undefined;
     const baseRate = primary
-      ? itemsPerMinute(recipe, primary.amount, 1, node.data.count) *
-        somersloopMultiplier(recipe, node.data, gameData)
+      ? itemsPerMinute(recipe, primary.amount, 1, base.data.count) *
+        somersloopMultiplier(recipe, base.data, gameData)
       : 0;
     return {
-      nodeId: only,
-      data: node.data,
+      nodeId: base.nodeId,
+      data: base.data,
       powerShardSlots: machine?.powerShardSlots ?? 0,
       somersloopSlots: machine?.somersloopSlots ?? 0,
-      powerMW: nodePowerMW(recipe, node.data, gameData),
+      powerMW: nodePowerMW(recipe, base.data, gameData),
       primary: primary && primaryItem
         ? { baseRate, itemName: primaryItem.name, itemIcon: primaryItem.icon }
         : null,
@@ -696,13 +693,28 @@ export default function GraphCanvas({ onSelectNode }: Props) {
     [activeGraphId, store],
   );
 
+  // Renaming a factory node keeps the node label and its referenced subgraph
+  // in lockstep so the project switcher and canvas label don't diverge.
+  const renameFactoryNode = useCallback(
+    (nodeId: string, label: string) => {
+      const g = store.getState().graphs[activeGraphId];
+      const node = g?.nodes.find((n) => n.id === nodeId);
+      if (!node || node.data.kind !== 'factory') return;
+      store.getState().updateNode(activeGraphId, nodeId, {
+        data: { ...node.data, label },
+      });
+      store.getState().renameGraph(node.data.factoryGraphId, label);
+    },
+    [activeGraphId, store],
+  );
+
   const nodeMenuBlueprint = (() => {
-    if (!nodeMenu || nodeMenuTargets.size !== 1) return null;
-    const only = [...nodeMenuTargets][0];
-    const node = activeGraph?.nodes.find((n) => n.id === only);
-    if (!node || node.data.kind !== 'blueprint') return null;
-    return { nodeId: only, data: node.data };
+    const base = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'blueprint');
+    if (!base) return null;
+    return { ...base, description: blueprints[base.data.blueprintId]?.description };
   })();
+
+  const nodeMenuFactory = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'factory');
 
   // Factory nodes reference a subgraph in graphStore, not embedded nodes, so
   // they can't be packaged into a self-contained blueprint record.
@@ -735,7 +747,6 @@ export default function GraphCanvas({ onSelectNode }: Props) {
         onConnect={onConnect}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
-        onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
         onSelectionContextMenu={onSelectionContextMenu}
@@ -805,7 +816,16 @@ export default function GraphCanvas({ onSelectNode }: Props) {
             nodeMenuBlueprint
               ? {
                   count: nodeMenuBlueprint.data.count,
+                  description: nodeMenuBlueprint.description,
                   onCount: (n) => updateBlueprintNodeData(nodeMenuBlueprint.nodeId, { count: n }),
+                }
+              : undefined
+          }
+          factory={
+            nodeMenuFactory
+              ? {
+                  label: nodeMenuFactory.data.label,
+                  onLabelChange: (label) => renameFactoryNode(nodeMenuFactory.nodeId, label),
                 }
               : undefined
           }
