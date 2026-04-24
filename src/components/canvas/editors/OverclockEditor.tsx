@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
 import IconOrLabel from '@/components/ui/IconOrLabel';
+import { formatNumber } from '@/lib/format';
 import PowerReadout from './PowerReadout';
 
 interface Props {
@@ -20,19 +21,29 @@ export default function OverclockEditor({
   primaryOutput,
   onChange,
 }: Props) {
-  const pct = Math.round(clockSpeed * 100);
+  const pct = clockSpeed * 100;
   const maxPct = 100 + 50 * Math.max(powerShardSlots, 0);
   const maxDecimals = 4;
 
-  const applyPct = (next: number) => {
-    const clamped = Math.max(1, Math.min(maxPct, Math.round(next)));
-    onChange(clamped / 100);
+  // Satisfactory accepts fractional clock speeds; hitting an exact output rate
+  // (e.g. 10/min of iron rods) often requires sub-percent precision. Only the
+  // slider rounds; the input preserves what the user types.
+  const applyPct = (next: number) => onChange(Math.max(1, Math.min(maxPct, next)) / 100);
+
+  // Local text state lets users type "45." on the way to "45.4545" without the
+  // clock reformatting under the caret.
+  const pctDisplay = formatNumber(pct, maxDecimals);
+  const [pctText, setPctText] = useState(pctDisplay);
+  useEffect(() => setPctText(pctDisplay), [pctDisplay]);
+
+  const commitPct = (raw: string) => {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    applyPct(parsed);
   };
 
-  // Target-rate input: authoritative text mirrors the clock; local editing state
-  // lets users type "4" on their way to "45" without the clock snapping mid-type.
   const currentRate = primaryOutput ? primaryOutput.baseRate * (pct / 100) : 0;
-  const rateDisplay = formatRate(currentRate, maxDecimals);
+  const rateDisplay = formatNumber(currentRate, maxDecimals);
   const [rateText, setRateText] = useState(rateDisplay);
   useEffect(() => setRateText(rateDisplay), [rateDisplay]);
 
@@ -50,12 +61,14 @@ export default function OverclockEditor({
           Clock Speed
         </span>
         <input
-          type="number"
-          min={1}
-          max={maxPct}
-          value={pct}
-          onChange={(e) => applyPct(Number(e.target.value) || 1)}
-          className="ml-auto w-16 rounded border border-border bg-panel-hi px-1.5 py-0.5 text-right text-sm font-semibold tabular-nums outline-none focus:border-accent"
+          type="text"
+          inputMode="decimal"
+          value={pctText}
+          onChange={(e) => {
+            setPctText(e.target.value);
+            commitPct(e.target.value);
+          }}
+          className="ml-auto w-20 rounded border border-border bg-panel-hi px-1.5 py-0.5 text-right text-sm font-semibold tabular-nums outline-none focus:border-accent"
         />
         <span className="text-xs text-[#6b7388]">%</span>
       </div>
@@ -64,25 +77,29 @@ export default function OverclockEditor({
         type="range"
         min={1}
         max={maxPct}
-        value={pct}
+        step={1}
+        value={Math.round(pct)}
         onChange={(e) => applyPct(Number(e.target.value))}
         className="mb-2 w-full accent-accent"
       />
 
       <div className="mb-2 grid grid-cols-6 gap-1">
-        {PRESETS.filter((p) => p <= maxPct).map((p) => (
-          <button
-            key={p}
-            onClick={() => applyPct(p)}
-            className={`rounded border py-1 text-[10px] font-medium transition-colors ${
-              pct === p
-                ? 'border-accent bg-accent/10 text-accent'
-                : 'border-border bg-panel-hi text-[#e6e8ee] hover:border-accent/50'
-            }`}
-          >
-            {p}%
-          </button>
-        ))}
+        {PRESETS.filter((p) => p <= maxPct).map((p) => {
+          const active = Math.abs(pct - p) < 1e-4;
+          return (
+            <button
+              key={p}
+              onClick={() => applyPct(p)}
+              className={`rounded border py-1 text-[10px] font-medium transition-colors ${
+                active
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border bg-panel-hi text-[#e6e8ee] hover:border-accent/50'
+              }`}
+            >
+              {p}%
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-2 text-[10px]">
@@ -120,9 +137,3 @@ export default function OverclockEditor({
   );
 }
 
-function formatRate(rate: number, maxDecimals: number): string {
-  if (!Number.isFinite(rate)) return '0';
-  const fixed = rate.toFixed(maxDecimals);
-  // Strip trailing zeros and trailing dot.
-  return fixed.replace(/\.?0+$/, '');
-}

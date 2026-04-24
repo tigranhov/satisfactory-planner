@@ -214,8 +214,20 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
   const icon = deriveIcon(blueprint);
   const nodeCount = blueprint.nodes.length;
 
+  // Skip text-input targets so right-click there still yields the native
+  // spellcheck/cut/paste menu instead of our action menu.
+  const handleCardContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input, textarea')) return;
+    e.preventDefault();
+    setMenuOpen(true);
+  };
+
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-panel-hi p-3 hover:border-accent/50">
+    <div
+      onContextMenu={handleCardContextMenu}
+      className="flex flex-col gap-2 rounded-md border border-border bg-panel-hi p-3 hover:border-accent/50"
+    >
       <div className="flex items-start gap-2">
         <IconOrLabel
           iconBasename={icon.iconBasename}

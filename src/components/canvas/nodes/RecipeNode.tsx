@@ -13,6 +13,7 @@ import {
 import type { HandleFlow } from '@/models/flow';
 import type { RecipeNodeData } from '@/models/graph';
 import { statusBorderClass } from '@/lib/nodeStatus';
+import { formatNumber } from '@/lib/format';
 
 const gameData = loadGameData();
 
@@ -26,8 +27,9 @@ function RecipeNode({ id, data, selected }: NodeProps) {
   const inputs = recipeInputs(recipe, nodeData);
   const outputs = recipeOutputs(recipe, nodeData, gameData);
   const machine = gameData.machines[recipe.machineId];
-  const clockPct = Math.round(nodeData.clockSpeed * 100);
-  const showClock = clockPct !== 100;
+  const clockPct = nodeData.clockSpeed * 100;
+  const showClock = Math.abs(clockPct - 100) > 1e-4;
+  const clockLabel = formatNumber(clockPct, 4);
   const sloopSlots = machine?.somersloopSlots ?? 0;
   const showSloops = nodeData.somersloops > 0 && sloopSlots > 0;
   const clockColor =
@@ -50,8 +52,8 @@ function RecipeNode({ id, data, selected }: NodeProps) {
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {showClock && (
-            <Chip palette={clockColor} title={`Clock speed: ${clockPct}%`} icon={<Zap className="h-3 w-3" />}>
-              {clockPct}%
+            <Chip palette={clockColor} title={`Clock speed: ${clockLabel}%`} icon={<Zap className="h-3 w-3" />}>
+              {clockLabel}%
             </Chip>
           )}
           {showSloops && (
