@@ -58,6 +58,7 @@ export interface Machine {
   powerShardSlots: number;
   somersloopSlots: number;
   producesPower?: boolean;
+  buildCost?: RecipeIO[];
 }
 
 export interface ResourceNodeDefaults {

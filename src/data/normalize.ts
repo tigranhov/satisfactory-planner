@@ -134,6 +134,11 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
   const itemByClass = new Map<string, StItem>();
   for (const i of Object.values(src.items)) itemByClass.set(i.className, i);
 
+  const itemSlugByClass = new Map<string, string>();
+  for (const [className, src_item] of Object.entries(src.items)) {
+    itemSlugByClass.set(className, src_item.slug);
+  }
+
   const resourceItemClasses = new Set<string>(Object.keys(src.resources));
 
   // A fuel item is one referenced by any generator's `fuel` array.
@@ -144,6 +149,21 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
   // SatisfactoryTools doesn't expose an `isBiomass` flag; we infer from fuel used by the
   // Biomass Burner. Everything accepted by Desc_GeneratorBiomass_C counts.
   const biomassItemClasses = new Set<string>(src.generators.Desc_GeneratorBiomass_C?.fuel ?? []);
+
+  // Map product class name to its building recipe ingredients.
+  const buildCostsByClass = new Map<string, RecipeIO[]>();
+  for (const r of Object.values(src.recipes)) {
+    if (!r.forBuilding) continue;
+    const buildingClass = r.products[0]?.item;
+    if (buildingClass) {
+      const ingredients = r.ingredients.map((i) => {
+        const itemId = itemSlugByClass.get(i.item);
+        if (!itemId) throw new Error(`building recipe ${r.slug}: unknown item ${i.item}`);
+        return { itemId, amount: i.amount };
+      });
+      buildCostsByClass.set(buildingClass, ingredients);
+    }
+  }
 
   // --- 2. Items.
   const items: Record<string, Item> = {};
@@ -162,11 +182,6 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
       energyMJ: src_item.energyValue || undefined,
       category: itemCategory(src_item, isResource, isFuel, isBiomass),
     };
-  }
-
-  const itemSlugByClass = new Map<string, string>();
-  for (const [className, src_item] of Object.entries(src.items)) {
-    itemSlugByClass.set(className, src_item.slug);
   }
 
   // --- 3. Machines (manufacturers + miners + generators).
@@ -190,9 +205,12 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
       icon: iconFileFromClassName(b.className),
       category: 'manufacturer',
       powerMW: b.metadata?.powerConsumption ?? 0,
-      isVariablePower: b.metadata?.powerConsumptionExponent !== undefined && b.metadata?.powerConsumptionExponent !== 1.6,
+      isVariablePower:
+        b.metadata?.powerConsumptionExponent !== undefined &&
+        b.metadata?.powerConsumptionExponent !== 1.6,
       powerShardSlots: defaultPowerShardSlots('manufacturer'),
       somersloopSlots: SOMERSLOOP_SLOTS[b.slug] ?? 0,
+      buildCost: buildCostsByClass.get(b.className),
     };
     machineSlugByClass.set(b.className, b.slug);
   }
@@ -211,6 +229,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
       powerMW: building?.metadata?.powerConsumption ?? 0,
       powerShardSlots: defaultPowerShardSlots('extractor'),
       somersloopSlots: 0,
+      buildCost: buildCostsByClass.get(m.className),
     };
     machineSlugByClass.set(m.className, slug);
   }
@@ -229,8 +248,33 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
       powerShardSlots: defaultPowerShardSlots('generator'),
       somersloopSlots: 0,
       producesPower: true,
+      buildCost: buildCostsByClass.get(g.className),
     };
     machineSlugByClass.set(g.className, slug);
+  }
+
+  // Logistics machines (Splitter, Merger, etc.)
+  for (const b of Object.values(src.buildings)) {
+    if (machines[b.slug]) continue;
+    const isLogistics =
+      b.className.includes('Splitter') ||
+      b.className.includes('Merger') ||
+      b.className.includes('Conveyor') ||
+      b.className.includes('Pipeline');
+
+    if (isLogistics && buildCostsByClass.has(b.className)) {
+      machines[b.slug] = {
+        id: b.slug,
+        name: b.name,
+        icon: iconFileFromClassName(b.className),
+        category: 'logistics',
+        powerMW: b.metadata?.powerConsumption ?? 0,
+        powerShardSlots: 0,
+        somersloopSlots: 0,
+        buildCost: buildCostsByClass.get(b.className),
+      };
+      machineSlugByClass.set(b.className, b.slug);
+    }
   }
 
   // --- 4. Production recipes (machine-only; skip hand/workshop/build-gun).
@@ -256,7 +300,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
     const machineId = producers[0];
     const machine = machines[machineId];
     const nominalPower = r.isVariablePower
-      ? (r.minPower + r.maxPower) / 2  // particle accelerator etc. — use mean
+      ? (r.minPower + r.maxPower) / 2 // particle accelerator etc. — use mean
       : machine.powerMW;
     recipes[r.slug] = {
       id: r.slug,
@@ -276,7 +320,7 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
   for (const g of Object.values(src.generators)) {
     const machineId = machineSlugByClass.get(g.className);
     if (!machineId) continue;
-    const waterRatio = g.waterToPowerRatio ?? 0;  // m³ water per MW-min
+    const waterRatio = g.waterToPowerRatio ?? 0; // m³ water per MW-min
     const waterId = itemSlugByClass.get('Desc_Water_C');
 
     for (const fuelClass of g.fuel) {
