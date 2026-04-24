@@ -54,6 +54,7 @@ function MergerNode({ data, selected }: NodeProps) {
       fallbackName="Merger"
       setFooter={`Merge · ${throughput.toFixed(1)}/min`}
       unsetFooter="Merger · 3 → 1"
+      status={nodeData.status}
     >
       <Handles />
     </HubLikeCard>

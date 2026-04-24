@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   Folder,
+  ListTodo,
   Pencil,
   Plus,
   RotateCw,
@@ -16,6 +17,7 @@ import { useGraphStore } from '@/store/graphStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import { useProjectStore } from '@/store/projectStore';
+import { useUiStore } from '@/store/uiStore';
 import { newGraphId } from '@/lib/ids';
 import BlueprintBook from '@/components/blueprints/BlueprintBook';
 import InlineItemText from '@/components/ui/InlineItemText';
@@ -35,6 +37,11 @@ export default function TopBar() {
   const activeGraphId = useActiveGraphId();
   const addNodeToActive = useGraphStore((s) => s.addNode);
   const registerGraph = useGraphStore((s) => s.registerGraph);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const taskPanelOpen = useUiStore((s) =>
+    activeProjectId ? !!s.taskPanelOpenByProject[activeProjectId] : false,
+  );
+  const setTaskPanelOpen = useUiStore((s) => s.setTaskPanelOpen);
 
   const handleAddFactory = () => {
     const factoryGraphId = newGraphId();
@@ -71,6 +78,17 @@ export default function TopBar() {
       </div>
       <div className="flex items-center gap-2">
         <UpdateChip />
+        <button
+          onClick={() => activeProjectId && setTaskPanelOpen(activeProjectId, !taskPanelOpen)}
+          disabled={!activeProjectId}
+          className={`flex items-center gap-1 rounded px-3 py-1 text-sm disabled:opacity-50 ${
+            taskPanelOpen ? 'bg-accent/20 text-accent' : 'bg-panel-hi hover:bg-border'
+          }`}
+          title="Toggle tasks panel"
+        >
+          <ListTodo className="h-4 w-4" />
+          Tasks
+        </button>
         <button
           onClick={() => setBookOpen(true)}
           className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"

@@ -6,6 +6,7 @@ import CountEditor from './editors/CountEditor';
 import OverclockEditor from './editors/OverclockEditor';
 import SomersloopEditor from './editors/SomersloopEditor';
 import InlineItemText from '@/components/ui/InlineItemText';
+import type { NodeStatus } from '@/models/graph';
 
 export interface RecipeControls {
   clockSpeed: number;
@@ -39,6 +40,10 @@ interface Props {
   onDuplicate: () => void;
   onExtract?: () => void;
   onEdit?: () => void;
+  status?: NodeStatus;
+  onStatusChange?: (status: NodeStatus | undefined) => void;
+  note?: string;
+  onNoteChange?: (note: string) => void;
   recipe?: RecipeControls;
   blueprint?: BlueprintControls;
   factory?: FactoryControls;
@@ -52,6 +57,10 @@ export default function NodeContextMenu({
   onDuplicate,
   onExtract,
   onEdit,
+  status,
+  onStatusChange,
+  note,
+  onNoteChange,
   recipe,
   blueprint,
   factory,
@@ -59,9 +68,12 @@ export default function NodeContextMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   usePopoverDismiss(rootRef, onClose, { escape: true });
 
+  const showNote = status !== undefined && !!onNoteChange;
+  const noteH = showNote ? 90 : 0;
+
   const MENU_W = 300;
   // Conservative upper bound for clamp positioning; real height is content-driven.
-  const MENU_H = recipe ? 360 : blueprint ? 160 : factory ? 96 : 48;
+  const MENU_H = (recipe ? 400 : blueprint ? 200 : factory ? 136 : 88) + noteH;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
   return (
@@ -123,6 +135,41 @@ export default function NodeContextMenu({
         </div>
       </div>
 
+      {onStatusChange && (
+        <div className="flex items-center gap-1 border-b border-border px-3 py-2">
+          <StatusButton
+            active={status === undefined}
+            label="None"
+            onClick={() => onStatusChange(undefined)}
+          />
+          <StatusButton
+            active={status === 'planned'}
+            label="Planned"
+            onClick={() => onStatusChange('planned')}
+          />
+          <StatusButton
+            active={status === 'built'}
+            label="Built"
+            onClick={() => onStatusChange('built')}
+          />
+        </div>
+      )}
+
+      {showNote && (
+        <div className="border-b border-border px-3 py-2">
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#6b7388]">
+            Task note
+          </label>
+          <textarea
+            value={note ?? ''}
+            onChange={(e) => onNoteChange?.(e.target.value)}
+            placeholder="Describe what's left to do, parts list, notes…"
+            rows={3}
+            className="w-full resize-none rounded border border-border bg-panel-hi px-2 py-1 text-xs outline-none focus:border-accent"
+          />
+        </div>
+      )}
+
       {recipe && (
         <>
           <CountEditor count={recipe.count} onChange={recipe.onCount} />
@@ -169,5 +216,24 @@ export default function NodeContextMenu({
         </div>
       )}
     </div>
+  );
+}
+
+interface StatusButtonProps {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}
+
+function StatusButton({ active, label, onClick }: StatusButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 rounded px-2 py-1 text-xs font-medium ${
+        active ? 'bg-panel-hi text-accent' : 'text-[#9aa2b8] hover:bg-panel-hi'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

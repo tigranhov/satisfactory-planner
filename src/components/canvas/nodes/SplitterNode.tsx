@@ -51,6 +51,7 @@ function SplitterNode({ data, selected }: NodeProps) {
       fallbackName="Splitter"
       setFooter={`Split · ${throughput.toFixed(1)}/min`}
       unsetFooter="Splitter · 1 → 3"
+      status={nodeData.status}
     >
       <Handles />
     </HubLikeCard>

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import { Sparkles, Zap } from 'lucide-react';
+import { CheckCircle2, Sparkles, Zap } from 'lucide-react';
 import ItemHandle from '../handles/ItemHandle';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { loadGameData } from '@/data/loader';
@@ -12,6 +12,7 @@ import {
 } from '@/models/factory';
 import type { HandleFlow } from '@/models/flow';
 import type { RecipeNodeData } from '@/models/graph';
+import { statusBorderClass } from '@/lib/nodeStatus';
 
 const gameData = loadGameData();
 
@@ -35,13 +36,18 @@ function RecipeNode({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      className={`min-w-[220px] rounded-md border bg-panel text-sm shadow-lg ${
-        selected ? 'border-accent' : 'border-border'
-      }`}
+      className={`min-w-[220px] rounded-md border bg-panel text-sm shadow-lg ${statusBorderClass(
+        nodeData.status,
+        !!selected,
+        'border-border',
+      )}`}
     >
       <div className="flex items-center gap-2 rounded-t-md border-b border-border bg-panel-hi px-3 py-1.5">
         <IconOrLabel iconBasename={machine?.icon} name={machine?.name ?? '?'} bgClassName="bg-panel" />
         <span className="truncate font-medium">{recipe.name}</span>
+        {nodeData.status === 'built' && (
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+        )}
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {showClock && (
             <Chip palette={clockColor} title={`Clock speed: ${clockPct}%`} icon={<Zap className="h-3 w-3" />}>

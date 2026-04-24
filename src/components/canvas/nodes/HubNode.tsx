@@ -46,6 +46,7 @@ function HubNode({ data, selected }: NodeProps) {
       fallbackName="Unset hub"
       setFooter={`Hub · ${throughput.toFixed(1)}/min`}
       unsetFooter="Hub · connect to set type"
+      status={nodeData.status}
     >
       <Handles />
     </HubLikeCard>

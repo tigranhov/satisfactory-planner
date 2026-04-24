@@ -58,8 +58,10 @@ import type {
   Graph,
   GraphEdge,
   NodeData,
+  NodeStatus,
   RecipeNodeData,
 } from '@/models/graph';
+import { useUiStore } from '@/store/uiStore';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -167,7 +169,9 @@ export default function GraphCanvas() {
   const blueprints = useBlueprintStore((s) => s.blueprints);
   const store = useGraphStore;
   const enter = useNavigationStore((s) => s.enter);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setCenter } = useReactFlow();
+  const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
+  const clearPendingFocus = useUiStore((s) => s.clearPendingFocus);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // React Flow's internal state must own the nodes array: it mutates it in place to
@@ -224,6 +228,19 @@ export default function GraphCanvas() {
     });
     setEdges(srcEdges);
   }, [activeGraph, resolver, graphs, blueprints, setNodes, setEdges]);
+
+  // Tasks panel cross-graph click sets a pending focus id; once the target
+  // node has rendered into React Flow's state (possibly after a graph jump),
+  // pan to it and clear the pending marker so repeat clicks re-fire cleanly.
+  useEffect(() => {
+    if (!pendingFocusNodeId) return;
+    const target = nodes.find((n) => n.id === pendingFocusNodeId);
+    if (!target) return;
+    const cx = target.position.x + (target.measured?.width ?? 120) / 2;
+    const cy = target.position.y + (target.measured?.height ?? 80) / 2;
+    setCenter(cx, cy, { zoom: 1.2, duration: 400 });
+    clearPendingFocus();
+  }, [nodes, pendingFocusNodeId, setCenter, clearPendingFocus]);
 
   const onNodeDragStop = useCallback(
     (_e: React.MouseEvent, node: Node) => {
@@ -716,6 +733,57 @@ export default function GraphCanvas() {
 
   const nodeMenuFactory = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'factory');
 
+  const setNodeStatus = useCallback(
+    (nodeIds: Set<string>, status: NodeStatus | undefined) => {
+      const g = store.getState().graphs[activeGraphId];
+      if (!g) return;
+      for (const id of nodeIds) {
+        const node = g.nodes.find((n) => n.id === id);
+        if (!node) continue;
+        store.getState().updateNode(activeGraphId, id, {
+          data: { ...node.data, status },
+        });
+      }
+    },
+    [activeGraphId, store],
+  );
+
+  const setNodeNote = useCallback(
+    (nodeIds: Set<string>, note: string) => {
+      const g = store.getState().graphs[activeGraphId];
+      if (!g) return;
+      const trimmed = note.length === 0 ? undefined : note;
+      for (const id of nodeIds) {
+        const node = g.nodes.find((n) => n.id === id);
+        if (!node) continue;
+        store.getState().updateNode(activeGraphId, id, {
+          data: { ...node.data, taskNote: trimmed },
+        });
+      }
+    },
+    [activeGraphId, store],
+  );
+
+  // Collapse to `undefined` when the selection is mixed so the row shows no
+  // single state — clicking any option then writes that state to all targets.
+  const nodeMenuStatus: NodeStatus | undefined = (() => {
+    if (nodeMenuTargets.size === 0) return undefined;
+    const first = [...nodeMenuTargets][0];
+    const firstStatus = activeGraph?.nodes.find((n) => n.id === first)?.data.status;
+    for (const id of nodeMenuTargets) {
+      const s = activeGraph?.nodes.find((n) => n.id === id)?.data.status;
+      if (s !== firstStatus) return undefined;
+    }
+    return firstStatus;
+  })();
+
+  // Only expose the note editor for a single-selected node — showing one note
+  // for a mixed selection would lose data on edit.
+  const nodeMenuNote: string | undefined =
+    nodeMenuTargets.size === 1
+      ? activeGraph?.nodes.find((n) => n.id === [...nodeMenuTargets][0])?.data.taskNote
+      : undefined;
+
   // Factory nodes reference a subgraph in graphStore, not embedded nodes, so
   // they can't be packaged into a self-contained blueprint record.
   const selectionHasFactory = (() => {
@@ -781,6 +849,14 @@ export default function GraphCanvas() {
           onClose={() => setNodeMenu(null)}
           onDelete={() => deleteTargets(nodeMenuTargets)}
           onDuplicate={() => duplicateTargets(nodeMenuTargets)}
+          status={nodeMenuStatus}
+          onStatusChange={(s) => setNodeStatus(nodeMenuTargets, s)}
+          note={nodeMenuNote}
+          onNoteChange={
+            nodeMenuTargets.size === 1
+              ? (v) => setNodeNote(nodeMenuTargets, v)
+              : undefined
+          }
           onExtract={
             nodeMenuTargets.size > 0 && !nodeMenuBlueprint && !selectionHasFactory
               ? () => {

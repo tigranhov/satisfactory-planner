@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { HelpCircle } from 'lucide-react';
+import { CheckCircle2, HelpCircle } from 'lucide-react';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { loadGameData } from '@/data/loader';
+import type { NodeStatus } from '@/models/graph';
+import { statusBorderClass } from '@/lib/nodeStatus';
 
 const gameData = loadGameData();
 
@@ -16,6 +18,7 @@ interface Props {
   fallbackName: string;
   setFooter: string;
   unsetFooter: string;
+  status?: NodeStatus;
   children: ReactNode;
 }
 
@@ -29,14 +32,12 @@ export default function HubLikeCard({
   fallbackName,
   setFooter,
   unsetFooter,
+  status,
   children,
 }: Props) {
   const item = itemId ? gameData.items[itemId] : undefined;
-  const borderClass = selected
-    ? 'border-accent'
-    : itemId
-      ? activeBorderClass
-      : 'border-[#4a5068]';
+  const fallback = itemId ? activeBorderClass : 'border-[#4a5068]';
+  const borderClass = statusBorderClass(status, selected, fallback);
   const iconClass = itemId ? activeIconClass : 'text-[#6b7388]';
   return (
     <div
@@ -57,6 +58,9 @@ export default function HubLikeCard({
           {itemId ? setFooter : unsetFooter}
         </div>
       </div>
+      {status === 'built' && (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+      )}
     </div>
   );
 }

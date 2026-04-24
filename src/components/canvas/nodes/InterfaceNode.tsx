@@ -1,11 +1,12 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { HelpCircle, LogIn, LogOut } from 'lucide-react';
+import { CheckCircle2, HelpCircle, LogIn, LogOut } from 'lucide-react';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import InlineItemText from '@/components/ui/InlineItemText';
 import { loadGameData } from '@/data/loader';
 import { handleIdForInterface } from '@/models/factory';
 import type { InterfaceNodeData } from '@/models/graph';
+import { statusBorderClass } from '@/lib/nodeStatus';
 
 const gameData = loadGameData();
 
@@ -16,11 +17,8 @@ function InterfaceNode({ data, selected }: NodeProps) {
   const committed = !!nodeData.itemId;
 
   const borderActive = isInput ? 'border-sky-500/60' : 'border-fuchsia-500/60';
-  const borderClass = selected
-    ? 'border-accent'
-    : committed
-      ? borderActive
-      : 'border-[#4a5068]';
+  const fallback = committed ? borderActive : 'border-[#4a5068]';
+  const borderClass = statusBorderClass(nodeData.status, !!selected, fallback);
 
   return (
     <div
@@ -49,6 +47,9 @@ function InterfaceNode({ data, selected }: NodeProps) {
           {!committed && ' · connect to set type'}
         </div>
       </div>
+      {nodeData.status === 'built' && (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+      )}
       <Handle
         id={handleIdForInterface(nodeData.kind, nodeData.itemId)}
         type={isInput ? 'source' : 'target'}
