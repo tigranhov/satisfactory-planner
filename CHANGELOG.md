@@ -1,0 +1,86 @@
+# Changelog
+
+All notable user-facing changes to Satisfactory Planner are documented here. The
+format loosely follows [Keep a Changelog](https://keepachangelog.com/), and the
+project uses [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [0.5.0] - 2026-04-24
+
+### Added
+- Factory nodes can be renamed from the right-click context menu; the rename
+  cascades to the underlying subgraph so the project switcher stays in sync.
+- Blueprint description shows as a footer in the blueprint node's context menu.
+- Right-clicking a shift-drag box selection now opens the node context menu.
+
+### Changed
+- Removed the right-side inspector panel. Its controls (factory rename,
+  blueprint description) moved into the node context menu and the canvas fills
+  the full window width.
+
+### Fixed
+- Right-clicks on shift-drag selections were previously swallowed by React
+  Flow's selection overlay; the context menu now opens in that case too.
+
+## [0.4.0] - 2026-04-24
+
+### Added
+- Drag a node handle onto empty canvas to open a placement menu pre-filtered to
+  recipes and blueprints that match the handle's item type.
+- Inline item icons render alongside item names throughout the UI.
+- Hub-like nodes (hub, splitter, merger) surface dedicated input/output ports
+  that can be addressed individually.
+
+## [0.3.0] - 2026-04-23
+
+### Added
+- Splitter and merger passthrough nodes that mirror in-game flow behavior.
+- Right-click an edge to remove it without touching the endpoint nodes.
+
+## [0.2.0] - 2026-04-23
+
+### Added
+- Recipe nodes display their machine count, editable from the context menu.
+- Hub pass-through node for routing items with conservation-aware flow.
+
+### Changed
+- README rewritten as end-user documentation.
+
+## [0.1.1] - 2026-04-23
+
+### Changed
+- Stripped the default Electron application menu — the app is keyboard-driven
+  and didn't need the File/Edit/View/… menu bar.
+
+## [0.1.0] - 2026-04-23
+
+Initial release.
+
+### Added
+- Electron + React + React Flow factory planning app scaffold.
+- Satisfactory 1.0 recipe, item, and building data imported from
+  SatisfactoryTools.
+- Interactive recipe nodes with demand-driven edge flow computation.
+- Edge flow classification: surplus, exact, shortage.
+- Canvas context menus and clipboard shortcuts (Ctrl+C / Ctrl+V / Ctrl+D,
+  Delete, Backspace).
+- Overclock and somersloop editing on recipe nodes.
+- Blueprint library: create, rename, duplicate, delete, extract canvas
+  selection to a blueprint.
+- Blueprint drill-in editor with Input and Output boundary nodes.
+- Blueprint canvas nodes, picker integration, and an extract action on the
+  node context menu.
+- Factory (formerly Composite) nested-subgraph nodes with aggregated I/O rates
+  and a trimmed picker surface.
+- Multi-project autosave with per-project files under `%APPDATA%\Satisfactory Planner`.
+- GitHub Releases auto-update via `electron-updater`, surfacing a
+  "Restart to update" chip when a new installer has been downloaded.
+
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/tigranhov/satisfactory-planner/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/tigranhov/satisfactory-planner/releases/tag/v0.1.0

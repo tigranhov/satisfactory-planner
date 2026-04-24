@@ -1,13 +1,13 @@
 ---
 name: release
-description: Analyze commits since the last release tag, suggest a semver bump, execute the tag-and-publish flow, and remind the user to publish the draft GitHub Release.
+description: Analyze commits since the last release tag, suggest a semver bump, draft a changelog entry, execute the tag-and-publish flow, and remind the user to publish the draft GitHub Release.
 ---
 
 # Release
 
-Invoke when the user asks to cut a release ("ship a release", "release it", "cut v0.2", "tag new version", etc.). The skill proposes a version bump based on commits since the last release, confirms with the user, then drives the full publish flow.
+Invoke when the user asks to cut a release ("ship a release", "release it", "cut v0.2", "tag new version", etc.). The skill proposes a version bump based on commits since the last release, drafts a `CHANGELOG.md` entry, confirms both with the user, then drives the full publish flow including syncing the changelog into the GitHub Release body.
 
-Full human-facing reference: `RELEASES.md`.
+Full human-facing reference: `RELEASES.md`. Canonical changelog: `CHANGELOG.md`.
 
 ## Step 1: Gather state
 
@@ -59,17 +59,16 @@ Default. Fixes, simplify passes, internal refactors, dependency bumps, renames t
 - `Fix …` / `Simplify` / `Trim` / `Drop` / `Document` / `Ignore` → patch.
 - `Remove the X` → patch if X is dead code, minor if X was a user-facing feature, major if X was a persisted field.
 
-## Step 3: Present the suggestion
+## Step 3: Present the suggestion + draft a changelog entry
 
 Show the user:
 
 - The commit list since the last tag (shortlog with subjects).
 - The proposed bump and the specific commits / rules that pushed it there (e.g. "minor because commit `4f4770c Add blueprint library` introduced a new user-facing surface").
 - The resulting version (`current` → `proposed`).
+- **A drafted `CHANGELOG.md` entry for the proposed version.** Follow the format already used in `CHANGELOG.md` (Keep a Changelog-ish: `## [X.Y.Z] - YYYY-MM-DD`, then `### Added` / `### Changed` / `### Fixed` / `### Removed` sections as applicable). Rewrite commit subjects into user-facing language — skip internal refactors, comment cleanups, and docs/skill edits unless they materially affect users. One bullet per user-observable change, not one bullet per commit.
 
-Ask for confirmation — accept a redirect to a different bump (the user may know context you don't, like "this minor actually needs to be major because we changed the project JSON layout").
-
-If this is the first release (no prior tag), skip bump selection and confirm the current `package.json` version will be tagged as-is.
+Ask for confirmation of both the bump AND the changelog entry. Accept edits to either (user may know context you don't, or want the phrasing rewritten). If this is the first release (no prior tag), skip bump selection and confirm the current `package.json` version will be tagged as-is — still draft a changelog entry.
 
 ## Step 4: Pre-flight checks
 
@@ -82,16 +81,29 @@ Before tagging:
 
 ## Step 5: Execute
 
-Two shapes, depending on whether `package.json` already matches the target version.
+### 5a. Update `CHANGELOG.md`
 
-### Standard bump (existing version ≠ target)
+Replace the `## [Unreleased]` placeholder with the new section header (`## [X.Y.Z] - YYYY-MM-DD`) and add a fresh empty `## [Unreleased]` above it. Add or update the two comparison links at the bottom of the file (`[Unreleased]: …/compare/vX.Y.Z...HEAD` and `[X.Y.Z]: …/compare/vPREV...vX.Y.Z`).
+
+Stage and commit as its own commit **before** the version bump so the tag on the bump commit already has the changelog history behind it:
 
 ```sh
-npm version <patch|minor|major>   # edits package.json, commits, creates v<X.Y.Z> tag
-git push --follow-tags            # pushes the bump commit AND the tag
+git add CHANGELOG.md
+git commit -m "Changelog for vX.Y.Z"
 ```
 
-### First release (existing version already matches target, no prior tag)
+### 5b. Bump + tag
+
+Two shapes, depending on whether `package.json` already matches the target version. Note: this repo uses Bun, so `npm` is not installed — use `bun pm version` which behaves identically (edits `package.json`, creates a commit, creates the tag).
+
+#### Standard bump (existing version ≠ target)
+
+```sh
+bun pm version <patch|minor|major>   # edits package.json, commits, creates v<X.Y.Z> tag
+git push --follow-tags               # pushes the bump commit AND the tag
+```
+
+#### First release (existing version already matches target, no prior tag)
 
 ```sh
 git tag -a v<X.Y.Z> -m "v<X.Y.Z> — <short summary>"
@@ -100,20 +112,26 @@ git push origin v<X.Y.Z>
 
 Use the second shape only when `package.json` already declares the target version AND no prior `v*` tag exists. Never hand-roll a tag that disagrees with `package.json`.
 
-## Step 6: Watch + post-release reminders
+## Step 6: Watch + sync release notes + post-release reminders
 
 Right after pushing the tag:
 
 1. Run `gh run list --workflow=release.yml --limit 1` (or `gh run view <id>`) to confirm the workflow started.
-2. Tell the user two things:
-   - **Publish the draft.** The workflow uploads to a draft GitHub Release. `electron-updater` only sees **published** releases via `/releases/latest`, so installed clients won't download anything until the user clicks "Publish release" on the Releases page. Every future release needs the same manual publish step.
+2. Offer to schedule a wake-up to check `gh run view <id>` after ~4 minutes so you can report success/failure without the user polling.
+3. Once the workflow has created the draft release, sync the changelog section into the GitHub Release body so the Releases page shows the same entry users see in `CHANGELOG.md`. Extract just the `## [X.Y.Z] - …` section (everything until the next `## [` header) and write it to a temp file, then:
+   ```sh
+   gh release edit vX.Y.Z --notes-file <temp-file>
+   ```
+   This works for both draft and published releases and doesn't require `--draft=false`.
+4. Tell the user two things:
+   - **Publish the draft.** The workflow uploads to a draft GitHub Release. `electron-updater` only sees **published** releases via `/releases/latest`, so installed clients won't download anything until the user clicks "Publish release" on the Releases page. Every future release needs the same manual publish step. (The agent is explicitly forbidden from flipping draft → published; see "What Claude may / may not do".)
    - **Actions permissions.** If the publish step fails with 403, tell the user to flip the repo's **Settings → Actions → General → Workflow permissions** to "Read and write permissions" and re-run.
-3. Offer to schedule a wake-up to check `gh run view <id>` after ~4 minutes so you can report success/failure without the user polling.
 
 ## What Claude may / may not do
 
-- **May**: run `npm version`, `git tag`, `git push`, `git push origin <tag>`. These are authorized by the user's "cut a release" request.
-- **Must not**: click "Publish release" on the draft — that's a GitHub UI action. Always remind the user.
+- **May**: run `bun pm version` / `npm version`, `git tag`, `git push`, `git push origin <tag>`, `gh release edit --notes-file`. These are authorized by the user's "cut a release" request.
+- **May**: update `CHANGELOG.md` and commit it as part of the release flow.
+- **Must not**: flip a draft release to published (`gh release edit --draft=false`) — that triggers `electron-updater` auto-updates on every installed client. Always remind the user to publish the draft manually.
 - **Must not**: force-push tags (`git push -f <tag>`), delete tags, or amend published commits. If a release is botched, cut a new patch version instead of rewriting history.
 - **Must not**: skip typecheck / lint before tagging. A failed CI run wastes a version number and leaves a broken draft the user has to clean up.
 - **Must not**: bump to `1.0.0` without the user explicitly asking, even if the major-change rules would technically justify it. Surface the recommendation, confirm first.

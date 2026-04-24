@@ -5,29 +5,43 @@ copies check `tigranhov/satisfactory-planner`'s latest release on boot and
 auto-download any newer version — a "Restart to update" chip appears in the
 top bar when the download finishes.
 
+See [`CHANGELOG.md`](./CHANGELOG.md) for the per-release change history. Each
+release's GitHub Release body mirrors the matching `CHANGELOG.md` section.
+
 ## Cutting a release
+
+The `/release` skill drives this end-to-end. Steps, for reference:
 
 1. Make sure `main` is clean and CI-green locally (`bun run typecheck`,
    `bun run lint`).
-2. Bump the version. Use semver appropriate to the change:
+2. Add a `## [X.Y.Z] - YYYY-MM-DD` section at the top of `CHANGELOG.md` (below
+   `## [Unreleased]`), update the link footnotes, and commit it:
    ```sh
-   npm version patch   # 0.1.0 -> 0.1.1
-   npm version minor   # 0.1.0 -> 0.2.0
-   npm version major   # 0.1.0 -> 1.0.0
+   git add CHANGELOG.md
+   git commit -m "Changelog for vX.Y.Z"
    ```
-   `npm version` commits the `package.json` change and creates a matching
-   annotated tag (`v0.1.1`, etc.).
-3. Push the tag (this also pushes the commit):
+3. Bump the version. Use semver appropriate to the change:
+   ```sh
+   bun pm version patch   # 0.1.0 -> 0.1.1
+   bun pm version minor   # 0.1.0 -> 0.2.0
+   bun pm version major   # 0.1.0 -> 1.0.0
+   ```
+   `bun pm version` (like `npm version`) commits the `package.json` change and
+   creates a matching annotated tag (`v0.1.1`, etc.).
+4. Push the tag (this also pushes the commit):
    ```sh
    git push --follow-tags
    ```
-4. The `Release` workflow picks up the `v*` tag, builds the installer on
+5. The `Release` workflow picks up the `v*` tag, builds the installer on
    `windows-latest`, and publishes a draft GitHub Release with
    `Satisfactory.Planner.Setup.<version>.exe` plus the `latest.yml` metadata
    file that `electron-updater` reads.
-5. Go to the repo's Releases page, review the draft (edit the notes if
-   needed), and **publish**. Once published, installed clients pick up the
-   update on their next launch.
+6. Sync the changelog section into the release body:
+   ```sh
+   gh release edit vX.Y.Z --notes-file <extracted-section>
+   ```
+7. Go to the repo's Releases page, review the draft, and **publish**. Once
+   published, installed clients pick up the update on their next launch.
 
 ## Local installer build (no publish)
 
