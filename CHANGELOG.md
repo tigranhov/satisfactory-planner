@@ -6,6 +6,37 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-25
+
+### Added
+- **Auto-fill inputs.** Right-click a recipe node with disconnected
+  ingredients to open a picker — choose a producing recipe per missing
+  input and the upstream machines are placed and wired automatically. Two
+  settings shape the layout: clock strategy (N−1 at 100% + 1 partial vs.
+  all uniform) and node grouping (combine same-clock machines into one
+  count-based node vs. one node per machine).
+- New Settings modal opened from a gear icon in the top bar.
+- Drag-from-handle picker now starts with item selection when the source
+  has no committed item, mirroring the right-click canvas menu. Drags
+  from a committed item still jump straight to the recipe list.
+- Right-click on a blueprint tile in the library opens the same actions
+  menu as the three-dot button.
+
+### Changed
+- Recipe selectors order standard recipes ahead of alternates, with a
+  small orange "Alt" badge replacing the "Alternate:" name prefix.
+- Clock speeds accept fractional percentages — dial in the exact setting
+  for 10 iron rods/min instead of snapping to the nearest integer percent.
+
+### Fixed
+- Demand distribution across parallel feeder edges now water-fills, so a
+  target fed by 15 + 15 + 10 producers receives the full 40/min instead
+  of being clipped to 36.67.
+- Dragging a multi-node selection now persists every moved node — groups
+  stay together instead of spreading apart on each release.
+- Picking a blueprint from the drag-from-handle picker now wires its
+  matching outer handle to the source.
+
 ## [0.6.0] - 2026-04-24
 
 ### Added
@@ -94,7 +125,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.3.0...v0.4.0
