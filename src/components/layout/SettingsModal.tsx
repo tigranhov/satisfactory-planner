@@ -3,6 +3,7 @@ import { Settings, X } from 'lucide-react';
 import {
   useUiStore,
   type ClockStrategy,
+  type GridSize,
   type GroupingStrategy,
 } from '@/store/uiStore';
 
@@ -53,11 +54,27 @@ const GROUPING_STRATEGIES: GroupingOption[] = [
   },
 ];
 
+interface GridSizeOption {
+  value: GridSize;
+  label: string;
+  description: string;
+}
+
+const GRID_SIZES: GridSizeOption[] = [
+  { value: 10, label: '10 px', description: 'Fine — fits dense layouts.' },
+  { value: 20, label: '20 px', description: 'Default — matches the canvas dot grid.' },
+  { value: 40, label: '40 px', description: 'Coarse — keeps wide nodes on rails.' },
+];
+
 export default function SettingsModal({ open, onClose }: Props) {
   const clockStrategy = useUiStore((s) => s.clockStrategy);
   const setClockStrategy = useUiStore((s) => s.setClockStrategy);
   const groupingStrategy = useUiStore((s) => s.groupingStrategy);
   const setGroupingStrategy = useUiStore((s) => s.setGroupingStrategy);
+  const snapToGrid = useUiStore((s) => s.snapToGrid);
+  const setSnapToGrid = useUiStore((s) => s.setSnapToGrid);
+  const gridSize = useUiStore((s) => s.gridSize);
+  const setGridSize = useUiStore((s) => s.setGridSize);
 
   useEffect(() => {
     if (!open) return;
@@ -120,6 +137,40 @@ export default function SettingsModal({ open, onClose }: Props) {
                 onClick={() => setGroupingStrategy(opt.value)}
               />
             ))}
+          </SettingSection>
+
+          <SettingSection
+            heading="Grid"
+            blurb="Snap node positions to a fixed grid step when dragging or creating. Off by default."
+          >
+            <StrategyButton
+              active={snapToGrid}
+              label={snapToGrid ? 'Snap to grid: On' : 'Snap to grid: Off'}
+              description="Click to toggle. Affects drag, paste, and new-node placement."
+              onClick={() => setSnapToGrid(!snapToGrid)}
+            />
+            {snapToGrid && (
+              <div className="flex gap-2">
+                {GRID_SIZES.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setGridSize(opt.value)}
+                    className={`flex flex-1 flex-col gap-0.5 rounded border px-2 py-1.5 text-left transition-colors ${
+                      gridSize === opt.value
+                        ? 'border-accent bg-accent/10'
+                        : 'border-border bg-panel-hi hover:border-accent/50'
+                    }`}
+                  >
+                    <span
+                      className={`text-xs font-medium ${gridSize === opt.value ? 'text-accent' : ''}`}
+                    >
+                      {opt.label}
+                    </span>
+                    <span className="text-[10px] text-[#9aa2b8]">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </SettingSection>
         </div>
       </div>

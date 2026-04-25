@@ -9,6 +9,7 @@ const STORAGE_KEY = 'sp.uiState.v1';
 
 export type ClockStrategy = 'partial-last' | 'uniform';
 export type GroupingStrategy = 'combined' | 'split';
+export type GridSize = 10 | 20 | 40;
 
 interface PersistedShape {
   taskPanelOpenByProject: Record<ProjectId, boolean>;
@@ -16,6 +17,8 @@ interface PersistedShape {
   infoSectionsOpen: Record<string, boolean>;
   clockStrategy: ClockStrategy;
   groupingStrategy: GroupingStrategy;
+  snapToGrid: boolean;
+  gridSize: GridSize;
 }
 
 const DEFAULT_PERSISTED: PersistedShape = {
@@ -24,6 +27,8 @@ const DEFAULT_PERSISTED: PersistedShape = {
   infoSectionsOpen: {},
   clockStrategy: 'partial-last',
   groupingStrategy: 'combined',
+  snapToGrid: false,
+  gridSize: 20,
 };
 
 function loadPersisted(): PersistedShape {
@@ -38,6 +43,8 @@ function loadPersisted(): PersistedShape {
       infoSectionsOpen: parsed.infoSectionsOpen ?? {},
       clockStrategy: parsed.clockStrategy ?? DEFAULT_PERSISTED.clockStrategy,
       groupingStrategy: parsed.groupingStrategy ?? DEFAULT_PERSISTED.groupingStrategy,
+      snapToGrid: parsed.snapToGrid ?? DEFAULT_PERSISTED.snapToGrid,
+      gridSize: parsed.gridSize ?? DEFAULT_PERSISTED.gridSize,
     };
   } catch {
     return { ...DEFAULT_PERSISTED };
@@ -52,6 +59,8 @@ function savePersisted(state: PersistedShape, patch: Partial<PersistedShape> = {
     infoSectionsOpen: state.infoSectionsOpen,
     clockStrategy: state.clockStrategy,
     groupingStrategy: state.groupingStrategy,
+    snapToGrid: state.snapToGrid,
+    gridSize: state.gridSize,
     ...patch,
   };
   try {
@@ -67,6 +76,8 @@ interface UiState {
   infoSectionsOpen: Record<string, boolean>;
   clockStrategy: ClockStrategy;
   groupingStrategy: GroupingStrategy;
+  snapToGrid: boolean;
+  gridSize: GridSize;
   pendingFocusNodeId: NodeId | null;
   // Modal-open flags live here (not in PersistedShape — per-session) so the
   // global Back/Forward listener can suppress navigation while a modal is up.
@@ -78,6 +89,8 @@ interface UiState {
   setInfoSectionOpen: (sectionId: string, open: boolean) => void;
   setClockStrategy: (strategy: ClockStrategy) => void;
   setGroupingStrategy: (strategy: GroupingStrategy) => void;
+  setSnapToGrid: (enabled: boolean) => void;
+  setGridSize: (size: GridSize) => void;
   setBookOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   clearPendingFocus: () => void;
@@ -128,6 +141,20 @@ export const useUiStore = create<UiState>((set) => ({
       return { groupingStrategy: strategy };
     }),
 
+  setSnapToGrid: (enabled) =>
+    set((s) => {
+      if (s.snapToGrid === enabled) return s;
+      savePersisted(s, { snapToGrid: enabled });
+      return { snapToGrid: enabled };
+    }),
+
+  setGridSize: (size) =>
+    set((s) => {
+      if (s.gridSize === size) return s;
+      savePersisted(s, { gridSize: size });
+      return { gridSize: size };
+    }),
+
   setBookOpen: (open) =>
     set((s) => (s.bookOpen === open ? s : { bookOpen: open })),
 
@@ -147,3 +174,5 @@ export const useUiStore = create<UiState>((set) => ({
 export const getClockStrategy = (): ClockStrategy => useUiStore.getState().clockStrategy;
 export const getGroupingStrategy = (): GroupingStrategy =>
   useUiStore.getState().groupingStrategy;
+export const getSnapToGrid = (): boolean => useUiStore.getState().snapToGrid;
+export const getGridSize = (): GridSize => useUiStore.getState().gridSize;

@@ -75,6 +75,13 @@ import type {
 } from '@/models/graph';
 import { useUiStore, getClockStrategy, getGroupingStrategy } from '@/store/uiStore';
 import { isEditableTarget } from '@/lib/dom';
+import {
+  centerOnCursor,
+  estimateNodeHeight,
+  estimateNodeWidth,
+  kindFromReactFlowType,
+  snapPosition,
+} from '@/lib/canvasPlacement';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -109,21 +116,6 @@ function reactFlowTypeForKind(kind: NodeData['kind']): ReactFlowNodeType {
   return kind === 'input' || kind === 'output' ? 'interface' : kind;
 }
 const edgeTypes = { rate: RateEdge };
-
-// Fallback dimensions per React Flow node `type` when a node hasn't been
-// measured yet (first render after load). Conservative so the layout errs
-// on the side of leaving too much space rather than overlapping.
-function estimateNodeWidth(type: ReactFlowNodeType | undefined): number {
-  if (type === 'interface') return 180;
-  if (type === 'hub' || type === 'splitter' || type === 'merger') return 200;
-  if (type === 'target') return 220;
-  return 260;
-}
-function estimateNodeHeight(type: ReactFlowNodeType | undefined): number {
-  if (type === 'interface') return 72;
-  if (type === 'hub' || type === 'splitter' || type === 'merger') return 80;
-  return 180;
-}
 
 function singleSelectedNodeOfKind<K extends NodeData['kind']>(
   graph: Graph | undefined,
@@ -198,6 +190,9 @@ export default function GraphCanvas() {
   const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
   const clearPendingFocus = useUiStore((s) => s.clearPendingFocus);
   const clockStrategy = useUiStore((s) => s.clockStrategy);
+  const snapToGrid = useUiStore((s) => s.snapToGrid);
+  const gridSize = useUiStore((s) => s.gridSize);
+  const snapGridTuple = useMemo<[number, number]>(() => [gridSize, gridSize], [gridSize]);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // React Flow's internal state must own the nodes array: it mutates it in place to
@@ -438,8 +433,9 @@ export default function GraphCanvas() {
   );
 
   const onPickRecipe = useCallback(
-    (recipeId: string, position: { x: number; y: number }) => {
+    (recipeId: string, cursor: { x: number; y: number }) => {
       if (!gameData.recipes[recipeId]) return;
+      const position = centerOnCursor(cursor, 'recipe', gridSize, snapToGrid);
       store.getState().addNode(activeGraphId, position, {
         kind: 'recipe',
         recipeId,
@@ -449,42 +445,46 @@ export default function GraphCanvas() {
       });
       setMenu(null);
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   const onAddInterface = useCallback(
-    (kind: 'input' | 'output', position: { x: number; y: number }) => {
+    (kind: 'input' | 'output', cursor: { x: number; y: number }) => {
+      const position = centerOnCursor(cursor, kind, gridSize, snapToGrid);
       store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   const onPickBlueprint = useCallback(
-    (blueprintId: string, position: { x: number; y: number }) => {
+    (blueprintId: string, cursor: { x: number; y: number }) => {
+      const position = centerOnCursor(cursor, 'blueprint', gridSize, snapToGrid);
       placeBlueprintOnActiveGraph(blueprintId, position);
       setMenu(null);
     },
-    [],
+    [gridSize, snapToGrid],
   );
 
   const onAddHublike = useCallback(
-    (kind: 'hub' | 'splitter' | 'merger', position: { x: number; y: number }) => {
+    (kind: 'hub' | 'splitter' | 'merger', cursor: { x: number; y: number }) => {
+      const position = centerOnCursor(cursor, kind, gridSize, snapToGrid);
       store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   const onAddTarget = useCallback(
-    (position: { x: number; y: number }) => {
+    (cursor: { x: number; y: number }) => {
+      const position = centerOnCursor(cursor, 'target', gridSize, snapToGrid);
       store.getState().addNode(activeGraphId, position, {
         kind: 'target',
         targetCount: 1000,
       });
       setMenu(null);
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   // Place a new node at the drop position and wire it to the dragged handle
@@ -529,8 +529,9 @@ export default function GraphCanvas() {
         // inside the blueprint. Find the boundary node that matches our
         // direction + item and wire to its outer handle.
         const bpGraph = resolver(choice.blueprintId);
+        const bpAnchor = centerOnCursor(flow, 'blueprint', gridSize, snapToGrid);
         if (!bpGraph || !choiceItemId) {
-          placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+          placeBlueprintOnActiveGraph(choice.blueprintId, bpAnchor);
           setDragMenu(null);
           return;
         }
@@ -538,7 +539,7 @@ export default function GraphCanvas() {
         const boundary = bpGraph.nodes.find(
           (n) => n.data.kind === boundaryKind && n.data.itemId === choiceItemId,
         );
-        const newNodeId = placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+        const newNodeId = placeBlueprintOnActiveGraph(choice.blueprintId, bpAnchor);
         if (!newNodeId || !boundary) {
           setDragMenu(null);
           return;
@@ -585,7 +586,8 @@ export default function GraphCanvas() {
       }
 
       if (!data) return;
-      const newNodeId = store.getState().addNode(activeGraphId, flow, data);
+      const position = centerOnCursor(flow, data.kind, gridSize, snapToGrid);
+      const newNodeId = store.getState().addNode(activeGraphId, position, data);
 
       if (isFromSource) {
         commitAndAddEdge({
@@ -605,7 +607,7 @@ export default function GraphCanvas() {
 
       setDragMenu(null);
     },
-    [activeGraphId, commitAndAddEdge, dragMenu, resolver, store],
+    [activeGraphId, commitAndAddEdge, dragMenu, resolver, store, gridSize, snapToGrid],
   );
 
   const isSubgraph = activeGraphId !== ROOT_GRAPH_ID;
@@ -670,10 +672,13 @@ export default function GraphCanvas() {
       // at targetAnchor (cursor for Ctrl+V) or original+offset (Ctrl+D).
       const minX = Math.min(...clipboard.nodes.map((n) => n.position.x));
       const minY = Math.min(...clipboard.nodes.map((n) => n.position.y));
-      const anchor = targetAnchor ?? {
+      const rawAnchor = targetAnchor ?? {
         x: minX + DUPLICATE_OFFSET.x,
         y: minY + DUPLICATE_OFFSET.y,
       };
+      // Snap the anchor only — preserves relative offsets so a carefully-laid
+      // group stays intact, just nudges as a unit onto a grid intersection.
+      const anchor = snapPosition(rawAnchor, gridSize, snapToGrid);
       const dx = anchor.x - minX;
       const dy = anchor.y - minY;
       const oldToNew = new Map<string, string>();
@@ -699,7 +704,7 @@ export default function GraphCanvas() {
         });
       }
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   const duplicateTargets = useCallback(
@@ -835,8 +840,8 @@ export default function GraphCanvas() {
       const occupied: OccupiedRect[] = nodesRef.current.map((n) => ({
         x: n.position.x,
         y: n.position.y,
-        width: n.measured?.width ?? estimateNodeWidth(n.type as ReactFlowNodeType | undefined),
-        height: n.measured?.height ?? estimateNodeHeight(n.type as ReactFlowNodeType | undefined),
+        width: n.measured?.width ?? estimateNodeWidth(kindFromReactFlowType(n.type)),
+        height: n.measured?.height ?? estimateNodeHeight(kindFromReactFlowType(n.type)),
       }));
       const result = computeAutoFill(targetNodeId, target.position, selections, gameData, {
         clockStrategy: getClockStrategy(),
@@ -844,10 +849,14 @@ export default function GraphCanvas() {
         occupied,
       });
       applyAutoFillResult(result, (nodeSpecs, edgesFrom) => {
-        store.getState().addNodesAndEdges(activeGraphId, nodeSpecs, edgesFrom);
+        const snapped = nodeSpecs.map((spec) => ({
+          ...spec,
+          position: snapPosition(spec.position, gridSize, snapToGrid),
+        }));
+        store.getState().addNodesAndEdges(activeGraphId, snapped, edgesFrom);
       });
     },
-    [activeGraphId, store],
+    [activeGraphId, store, gridSize, snapToGrid],
   );
 
   const nodeMenuBlueprint = (() => {
@@ -961,6 +970,8 @@ export default function GraphCanvas() {
         onEdgeContextMenu={onEdgeContextMenu}
         deleteKeyCode={['Delete', 'Backspace']}
         proOptions={{ hideAttribution: true }}
+        snapToGrid={snapToGrid}
+        snapGrid={snapGridTuple}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2d3445" />
         <Controls />
