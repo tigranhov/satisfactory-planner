@@ -58,6 +58,7 @@ const HANDLE_PREFIX = {
   splitterOut: 'split-out',
   mergerIn: 'merge-in',
   mergerOut: 'merge-out',
+  targetIn: 'target-in',
 } as const;
 
 const SOURCE_HANDLE_PREFIXES: readonly string[] = [
@@ -77,6 +78,10 @@ export function handleIdForProduct(recipeId: string, itemId: string, index: numb
 export function handleIdForInterface(kind: 'input' | 'output', itemId?: string) {
   const prefix = kind === 'input' ? HANDLE_PREFIX.ifaceIn : HANDLE_PREFIX.ifaceOut;
   return itemId ? `${prefix}:${itemId}` : prefix;
+}
+
+export function handleIdForTarget(itemId?: string) {
+  return itemId ? `${HANDLE_PREFIX.targetIn}:${itemId}` : HANDLE_PREFIX.targetIn;
 }
 
 export const HUB_IN_HANDLE = HANDLE_PREFIX.hubIn;
@@ -127,6 +132,9 @@ export function itemIdForHandle(
   }
   if (node.data.kind === 'input' || node.data.kind === 'output') {
     return node.data.itemId ?? '';
+  }
+  if (node.data.kind === 'target') {
+    return node.data.targetItemId ?? '';
   }
   return side === 'source'
     ? itemIdFromSourceHandle(handleId ?? '')

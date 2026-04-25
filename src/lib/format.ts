@@ -8,3 +8,22 @@ export function formatNumber(value: number, maxDecimals: number): string {
 export function formatRate(rate: number): string {
   return `${rate.toFixed(1)}/min`;
 }
+
+// Compact duration formatter, two units max: "<1m", "Xm", "Xh Ym", "Xd Yh".
+// Returns "—" for non-positive / non-finite inputs so callers can use it
+// directly as a placeholder.
+export function formatDuration(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '—';
+  if (minutes < 1) return '<1m';
+  if (minutes < 60) return `${Math.ceil(minutes)}m`;
+  const totalHours = minutes / 60;
+  if (totalHours < 48) {
+    const h = Math.floor(totalHours);
+    const m = Math.round(minutes - h * 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  const totalDays = totalHours / 24;
+  const d = Math.floor(totalDays);
+  const h = Math.round(totalHours - d * 24);
+  return h > 0 ? `${d}d ${h}h` : `${d}d`;
+}

@@ -7,6 +7,7 @@ import {
   Package,
   Search,
   Split,
+  Target,
   Waypoints,
   Wrench,
 } from 'lucide-react';
@@ -55,6 +56,7 @@ interface Props {
     kind: 'hub' | 'splitter' | 'merger',
     flowPosition: { x: number; y: number },
   ) => void;
+  onAddTarget?: (flowPosition: { x: number; y: number }) => void;
 }
 
 const HUBLIKE_BUTTONS = [
@@ -96,6 +98,7 @@ export default function CanvasContextMenu({
   allowInterface = false,
   onAddInterface,
   onAddHublike,
+  onAddTarget,
 }: Props) {
   const [mode, setMode] = useState<Mode>('recipe');
   const [query, setQuery] = useState('');
@@ -453,6 +456,17 @@ export default function CanvasContextMenu({
             ))}
           </>
         )}
+        <div className="my-0.5 h-px w-5 bg-border" />
+        <button
+          onClick={() => {
+            onAddTarget?.(flowPosition);
+            onClose();
+          }}
+          title="Add Target (time-to-reach annotation)"
+          className="flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel hover:text-emerald-300"
+        >
+          <Target className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

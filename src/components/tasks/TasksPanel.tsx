@@ -12,6 +12,7 @@ import {
   Merge,
   Package,
   Split,
+  Target,
   Waypoints,
   X,
   type LucideIcon,
@@ -65,6 +66,15 @@ function describeNode(data: NodeData, blueprintName: (id: string) => string | un
       return { icon: Split, label: data.label || 'Splitter' };
     case 'merger':
       return { icon: Merge, label: data.label || 'Merger' };
+    case 'target': {
+      const itemName = data.targetItemId
+        ? gameData.items[data.targetItemId]?.name ?? data.targetItemId
+        : null;
+      return {
+        icon: Target,
+        label: itemName ? `Target: ${itemName}` : 'Target',
+      };
+    }
   }
 }
 

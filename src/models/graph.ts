@@ -12,7 +12,8 @@ export type NodeKind =
   | 'blueprint'
   | 'hub'
   | 'splitter'
-  | 'merger';
+  | 'merger'
+  | 'target';
 
 // Task tracking: `planned` = user intends to build, `built` = built in-game.
 // Absent on every node by default; existing saves load with `undefined`.
@@ -74,6 +75,16 @@ export interface MergerNodeData extends BaseNodeData {
   label?: string;
 }
 
+// Annotation node: takes one input handle (any item, commits on first edge)
+// and a user-set target count, then displays the time required to reach that
+// count given the current inflow rate. NOT a producer/consumer for project
+// accounting — see ROADMAP.md item #2.
+export interface TargetNodeData extends BaseNodeData {
+  kind: 'target';
+  targetItemId?: ItemId;
+  targetCount: number;
+}
+
 export type NodeData =
   | RecipeNodeData
   | FactoryNodeData
@@ -81,7 +92,8 @@ export type NodeData =
   | BlueprintNodeData
   | HubNodeData
   | SplitterNodeData
-  | MergerNodeData;
+  | MergerNodeData
+  | TargetNodeData;
 
 export interface GraphNode {
   id: NodeId;

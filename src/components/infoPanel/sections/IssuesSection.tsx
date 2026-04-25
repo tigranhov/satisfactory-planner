@@ -40,6 +40,10 @@ function nodeLabel(node: GraphNode | undefined, gameData: GameData): string {
       return d.label || 'Splitter';
     case 'merger':
       return d.label || 'Merger';
+    case 'target':
+      return d.targetItemId
+        ? `Target: ${gameData.items[d.targetItemId]?.name ?? d.targetItemId}`
+        : 'Target';
   }
 }
 

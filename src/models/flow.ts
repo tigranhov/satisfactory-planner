@@ -66,6 +66,10 @@ function handleRate(
   }
   if (node.data.kind === 'input' && side === 'out') return Number.POSITIVE_INFINITY;
   if (node.data.kind === 'output' && side === 'in') return Number.POSITIVE_INFINITY;
+  // Target nodes consume their entire inflow — same demand-infinity treatment
+  // as Output ports so the inbound edge's reported rate equals the upstream's
+  // actual delivery, which TargetNode reads to compute ETA.
+  if (node.data.kind === 'target' && side === 'in') return Number.POSITIVE_INFINITY;
   if (node.data.kind === 'blueprint') {
     const bp = node.data as BlueprintNodeData;
     return subgraphHandleRate(bp.blueprintId, bp.count, handleId, side, data, resolver);

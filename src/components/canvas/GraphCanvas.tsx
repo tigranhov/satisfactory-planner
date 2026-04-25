@@ -23,6 +23,7 @@ import BlueprintNode from './nodes/BlueprintNode';
 import HubNode from './nodes/HubNode';
 import SplitterNode from './nodes/SplitterNode';
 import MergerNode from './nodes/MergerNode';
+import TargetNode from './nodes/TargetNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
@@ -48,6 +49,7 @@ import {
   handleIdForIngredient,
   handleIdForInterface,
   handleIdForProduct,
+  handleIdForTarget,
   handleIdForSubgraphInput,
   handleIdForSubgraphOutput,
   isHublikeKind,
@@ -98,6 +100,7 @@ const nodeTypes = {
   hub: HubNode,
   splitter: SplitterNode,
   merger: MergerNode,
+  target: TargetNode,
 };
 
 type ReactFlowNodeType = keyof typeof nodeTypes;
@@ -113,6 +116,7 @@ const edgeTypes = { rate: RateEdge };
 function estimateNodeWidth(type: ReactFlowNodeType | undefined): number {
   if (type === 'interface') return 180;
   if (type === 'hub' || type === 'splitter' || type === 'merger') return 200;
+  if (type === 'target') return 220;
   return 260;
 }
 function estimateNodeHeight(type: ReactFlowNodeType | undefined): number {
@@ -337,6 +341,12 @@ export default function GraphCanvas() {
         });
         targetHandle = handleIdForInterface(targetNode.data.kind, itemId);
       }
+      if (targetNode.data.kind === 'target' && !targetNode.data.targetItemId) {
+        store.getState().updateNode(activeGraphId, targetNode.id, {
+          data: { ...targetNode.data, targetItemId: itemId },
+        });
+        targetHandle = handleIdForTarget(itemId);
+      }
 
       store.getState().addEdge(activeGraphId, {
         source: connection.source,
@@ -466,6 +476,17 @@ export default function GraphCanvas() {
     [activeGraphId, store],
   );
 
+  const onAddTarget = useCallback(
+    (position: { x: number; y: number }) => {
+      store.getState().addNode(activeGraphId, position, {
+        kind: 'target',
+        targetCount: 1000,
+      });
+      setMenu(null);
+    },
+    [activeGraphId, store],
+  );
+
   // Place a new node at the drop position and wire it to the dragged handle
   // via the shared commitAndAddEdge path. For interface / hub-likes that
   // land without a committed item, the unset handle form is used —
@@ -552,6 +573,12 @@ export default function GraphCanvas() {
         } else {
           newHandle = isFromSource ? MERGER_IN_HANDLES[0] : MERGER_OUT_HANDLE;
         }
+      } else if (choice.kind === 'target') {
+        // Target only has an input handle, so it's only reachable from a
+        // source-handle drag. Pre-commit targetItemId when we know the item;
+        // otherwise commitAndAddEdge will set it on first connection.
+        data = { kind: 'target', targetCount: 1000, targetItemId: choiceItemId };
+        newHandle = handleIdForTarget(choiceItemId);
       } else {
         data = { kind: choice.which };
         newHandle = handleIdForInterface(choice.which);
@@ -953,6 +980,7 @@ export default function GraphCanvas() {
           allowInterface={isSubgraph}
           onAddInterface={onAddInterface}
           onAddHublike={onAddHublike}
+          onAddTarget={onAddTarget}
         />
       )}
       {nodeMenu && (
