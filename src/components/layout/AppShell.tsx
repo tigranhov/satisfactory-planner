@@ -3,11 +3,13 @@ import GraphCanvas from '../canvas/GraphCanvas';
 import TasksPanel from '../tasks/TasksPanel';
 import InfoPanel from '../infoPanel/InfoPanel';
 import { useBlueprintEditorBridge } from '@/hooks/useBlueprintEditorBridge';
+import { useGlobalNavKeys } from '@/hooks/useGlobalNavKeys';
 import { useProjectStore } from '@/store/projectStore';
 import { useUiStore } from '@/store/uiStore';
 
 export default function AppShell() {
   useBlueprintEditorBridge();
+  useGlobalNavKeys();
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const tasksOpen = useUiStore((s) =>
     activeProjectId ? !!s.taskPanelOpenByProject[activeProjectId] : false,

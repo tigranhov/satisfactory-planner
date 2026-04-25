@@ -72,6 +72,7 @@ import type {
   RecipeNodeData,
 } from '@/models/graph';
 import { useUiStore, getClockStrategy, getGroupingStrategy } from '@/store/uiStore';
+import { isEditableTarget } from '@/lib/dom';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -82,12 +83,6 @@ interface ClipboardPayload {
 let clipboard: ClipboardPayload | null = null;
 
 const DUPLICATE_OFFSET = { x: 40, y: 40 };
-
-function isEditableTarget(el: EventTarget | null): boolean {
-  if (!(el instanceof HTMLElement)) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
-}
 
 const gameData = loadGameData();
 

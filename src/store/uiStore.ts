@@ -68,12 +68,18 @@ interface UiState {
   clockStrategy: ClockStrategy;
   groupingStrategy: GroupingStrategy;
   pendingFocusNodeId: NodeId | null;
+  // Modal-open flags live here (not in PersistedShape — per-session) so the
+  // global Back/Forward listener can suppress navigation while a modal is up.
+  bookOpen: boolean;
+  settingsOpen: boolean;
 
   setTaskPanelOpen: (projectId: ProjectId, open: boolean) => void;
   setInfoPanelOpen: (projectId: ProjectId, open: boolean) => void;
   setInfoSectionOpen: (sectionId: string, open: boolean) => void;
   setClockStrategy: (strategy: ClockStrategy) => void;
   setGroupingStrategy: (strategy: GroupingStrategy) => void;
+  setBookOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
   clearPendingFocus: () => void;
   navigateToNode: (graphId: GraphId, nodeId: NodeId) => void;
 }
@@ -81,6 +87,8 @@ interface UiState {
 export const useUiStore = create<UiState>((set) => ({
   ...loadPersisted(),
   pendingFocusNodeId: null,
+  bookOpen: false,
+  settingsOpen: false,
 
   setTaskPanelOpen: (projectId, open) =>
     set((s) => {
@@ -119,6 +127,12 @@ export const useUiStore = create<UiState>((set) => ({
       savePersisted(s, { groupingStrategy: strategy });
       return { groupingStrategy: strategy };
     }),
+
+  setBookOpen: (open) =>
+    set((s) => (s.bookOpen === open ? s : { bookOpen: open })),
+
+  setSettingsOpen: (open) =>
+    set((s) => (s.settingsOpen === open ? s : { settingsOpen: open })),
 
   clearPendingFocus: () => set({ pendingFocusNodeId: null }),
 

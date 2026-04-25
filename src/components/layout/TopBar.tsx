@@ -33,8 +33,6 @@ import {
 import { useUpdater } from '@/hooks/useUpdater';
 
 export default function TopBar() {
-  const [bookOpen, setBookOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const stack = useNavigationStore((s) => s.stack);
   const popTo = useNavigationStore((s) => s.popTo);
   const graphs = useGraphStore((s) => s.graphs);
@@ -50,6 +48,10 @@ export default function TopBar() {
     activeProjectId ? !!s.infoPanelOpenByProject[activeProjectId] : false,
   );
   const setInfoPanelOpen = useUiStore((s) => s.setInfoPanelOpen);
+  const bookOpen = useUiStore((s) => s.bookOpen);
+  const setBookOpen = useUiStore((s) => s.setBookOpen);
+  const settingsOpen = useUiStore((s) => s.settingsOpen);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
 
   const handleAddFactory = () => {
     const factoryGraphId = newGraphId();
