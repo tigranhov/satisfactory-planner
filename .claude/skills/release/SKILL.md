@@ -118,11 +118,19 @@ Right after pushing the tag:
 
 1. Run `gh run list --workflow=release.yml --limit 1` (or `gh run view <id>`) to confirm the workflow started.
 2. Offer to schedule a wake-up to check `gh run view <id>` after ~4 minutes so you can report success/failure without the user polling.
-3. Once the workflow has created the draft release, sync the changelog section into the GitHub Release body so the Releases page shows the same entry users see in `CHANGELOG.md`. Extract just the `## [X.Y.Z] - …` section (everything until the next `## [` header) and write it to a temp file, then:
+3. Once the workflow has created the draft release, sync the changelog section into the GitHub Release body so the Releases page shows the same entry users see in `CHANGELOG.md`. Extract just the `## [X.Y.Z] - …` section using a flag-based awk pass (a range pattern like `/start/,/start_or_other_header/` is broken — its end-marker matches the start line itself and you get only the header):
    ```sh
-   gh release edit vX.Y.Z --notes-file <temp-file>
+   awk -v V="X.Y.Z" '
+     $0 ~ "^## \\[" V "\\]" { flag=1 }
+     flag && /^## \[/ && $0 !~ "^## \\[" V "\\]" { exit }
+     flag
+   ' CHANGELOG.md > notes-vX.Y.Z.md
    ```
-   This works for both draft and published releases and doesn't require `--draft=false`.
+   Verify the file contains more than one line (`wc -l notes-vX.Y.Z.md`) before uploading — if it has only the header, the extraction failed silently. Write the file to a path inside the repo or an absolute Windows path; do not write to `/tmp` from the Write tool and read it from Bash, since their `/tmp` resolution can differ on Windows. Then:
+   ```sh
+   gh release edit vX.Y.Z --notes-file notes-vX.Y.Z.md
+   ```
+   After the edit, confirm with `gh release view vX.Y.Z --json body --jq '.body' | head -5` — the body should start with `## [X.Y.Z]` followed by the changelog sections, not just the header line. This works for both draft and published releases and doesn't require `--draft=false`.
 4. Tell the user two things:
    - **Publish the draft.** The workflow uploads to a draft GitHub Release. `electron-updater` only sees **published** releases via `/releases/latest`, so installed clients won't download anything until the user clicks "Publish release" on the Releases page. Every future release needs the same manual publish step. (The agent is explicitly forbidden from flipping draft → published; see "What Claude may / may not do".)
    - **Actions permissions.** If the publish step fails with 403, tell the user to flip the repo's **Settings → Actions → General → Workflow permissions** to "Read and write permissions" and re-run.
