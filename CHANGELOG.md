@@ -6,6 +6,34 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-04-25
+
+### Added
+- **Factory Info panel.** New right-side sidebar with two scope modes:
+  inside a factory it rolls up power, machines, somersloops, and issues;
+  at the project root it stays trimmed to overall power and material
+  flow. Toggle from a new Info button in the top bar; section
+  open/closed state persists across sessions.
+- **Three-way material flow.** Items are split into Final outputs
+  (produced, never consumed), Inputs needed (pure inputs plus
+  intermediate deficits), and Internal surplus (intermediates with extra
+  production). Tolerance absorbs floating-point noise so balanced
+  intermediates don't flicker into surplus.
+- **Hierarchical project roll-up.** Each factory and blueprint instance
+  contributes only what crosses its boundary — declared via
+  Input/Output ports, or net flow when no ports exist. A closed-loop
+  blueprint whose byproducts never reach a port stops leaking those
+  items into the project view.
+- **Build cost in Tasks.** Top-of-panel collapsible summary of total
+  resources for every node tagged Planned, plus a compact per-task cost
+  preview under each task name.
+- **Issues section** with click-to-jump: unsatisfied demand,
+  disconnected Input/Output ports, and orphan nodes link straight to the
+  offending node on the canvas. Over- and underclocked recipes surface
+  as colored % badges on Machines rows rather than as issues.
+- **Somersloop usage section.** Lists every node with somersloops
+  installed and its boost percentage; click to jump.
+
 ## [0.7.0] - 2026-04-25
 
 ### Added
@@ -125,7 +153,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.4.0...v0.5.0
