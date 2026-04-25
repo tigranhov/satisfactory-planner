@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Merge, Search, Split, Waypoints } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Merge, Search, Split, Waypoints } from 'lucide-react';
 import {
+  getConsumableItems,
+  getProducibleItems,
   getRecipesConsuming,
   getRecipesProducing,
   loadGameData,
@@ -11,8 +13,13 @@ import { clampMenuPosition } from '@/lib/popover';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
-import { PickerRow, BlueprintRowButton } from './CanvasContextMenu';
-import type { Recipe } from '@/data/types';
+import {
+  BlueprintRowButton,
+  ItemRowButton,
+  PickerRow,
+  RecipeRowContent,
+} from './CanvasContextMenu';
+import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 import type { HublikeKind } from '@/models/factory';
 import type { InterfaceNodeData } from '@/models/graph';
@@ -22,8 +29,8 @@ const gameData = loadGameData();
 type InterfaceKind = InterfaceNodeData['kind'];
 
 export type DragDropChoice =
-  | { kind: 'recipe'; recipeId: string }
-  | { kind: 'blueprint'; blueprintId: string }
+  | { kind: 'recipe'; recipeId: string; resolvedItemId?: string }
+  | { kind: 'blueprint'; blueprintId: string; resolvedItemId?: string }
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'interface'; which: InterfaceKind };
 
@@ -43,10 +50,19 @@ interface Props {
 
 // Flat, indexable candidate list drives both rendering and keyboard nav.
 type Candidate =
+  | { kind: 'item'; item: Item }
   | { kind: 'interface'; which: InterfaceKind }
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'recipe'; recipe: Recipe }
   | { kind: 'blueprint'; bp: Blueprint };
+
+// Items to surface per drag direction: consumers for source-drags (we want
+// something that uses the item), producers for target-drags (we want
+// something that makes it). Indices live in loader.ts — computed once.
+const itemsByDirection: { consumer: Item[]; producer: Item[] } = {
+  consumer: getConsumableItems(gameData),
+  producer: getProducibleItems(gameData),
+};
 
 export default function DragDropMenu({
   screenPosition,
@@ -58,6 +74,10 @@ export default function DragDropMenu({
 }: Props) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  // When the drag started from an unset handle the user picks the item
+  // first, then the recipe — mirroring the right-click canvas menu. This
+  // holds the item chosen on the first screen.
+  const [pickedItem, setPickedItem] = useState<Item | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -67,17 +87,19 @@ export default function DragDropMenu({
 
   usePopoverDismiss(rootRef, onClose, { escape: true });
 
-  useEffect(() => inputRef.current?.focus(), []);
+  useEffect(() => inputRef.current?.focus(), [pickedItem]);
 
-  const item = itemId ? gameData.items[itemId] : undefined;
+  // The committed itemId (if any) or the one the user picked on stage A.
+  const effectiveItemId = itemId || pickedItem?.id || '';
+  const item = effectiveItemId ? gameData.items[effectiveItemId] : undefined;
   // Drag from a SOURCE handle wants a consumer of the item; drag from a
   // TARGET handle wants a producer. When the source is unset ('' item),
   // this flag only affects the Input/Output shortcut direction.
   const lookingFor: 'consumer' | 'producer' = handleType === 'source' ? 'consumer' : 'producer';
-  // An unset source means the user is dragging from a hub-like with no
-  // committed item, or a fresh Input/Output. Show everything — the first
-  // edge will commit the item on both ends via commitAndAddEdge.
+  // True if the handle hasn't committed to any item yet (hub-like without
+  // connections, or fresh Input/Output). Stage A of the picker resolves this.
   const isUnset = !itemId;
+  const needsItemPick = isUnset && !pickedItem;
 
   const placeableBlueprints = useMemo(() => {
     const out: Blueprint[] = [];
@@ -89,46 +111,49 @@ export default function DragDropMenu({
 
   const candidates = useMemo<Candidate[]>(() => {
     const out: Candidate[] = [];
-    // An unset drag can't commit an interface node to any particular item,
-    // so hide the I/O shortcut in that case — the user would get a port
-    // with no type and no downstream meaning.
-    if (allowInterface && !isUnset) {
+    // Stage A: unset handle, no item chosen yet. User picks an item first
+    // (producers or consumers of that item become stage B). Hub-likes and
+    // all placeable blueprints remain available as direct shortcuts —
+    // they're itemless-compatible.
+    if (needsItemPick) {
+      for (const it of itemsByDirection[lookingFor]) out.push({ kind: 'item', item: it });
+      for (const bp of placeableBlueprints) out.push({ kind: 'blueprint', bp });
+      out.push({ kind: 'hublike', which: 'hub' });
+      out.push({ kind: 'hublike', which: 'splitter' });
+      out.push({ kind: 'hublike', which: 'merger' });
+      return out;
+    }
+
+    // Stage B: we know the item (committed or picked in stage A).
+    // Recipes first — the most common choice when dragging from a handle.
+    const recipes =
+      lookingFor === 'consumer'
+        ? getRecipesConsuming(gameData, effectiveItemId)
+        : getRecipesProducing(gameData, effectiveItemId);
+    for (const r of recipes) {
+      if (!r.manualOnly) out.push({ kind: 'recipe', recipe: r });
+    }
+    const matchKind = lookingFor === 'consumer' ? 'input' : 'output';
+    for (const bp of placeableBlueprints) {
+      const matches = bp.nodes.some(
+        (n) => n.data.kind === matchKind && n.data.itemId === effectiveItemId,
+      );
+      if (matches) out.push({ kind: 'blueprint', bp });
+    }
+    if (allowInterface) {
       out.push({ kind: 'interface', which: lookingFor === 'consumer' ? 'output' : 'input' });
     }
     out.push({ kind: 'hublike', which: 'hub' });
     out.push({ kind: 'hublike', which: 'splitter' });
     out.push({ kind: 'hublike', which: 'merger' });
-    if (isUnset) {
-      for (const r of Object.values(gameData.recipes)) {
-        if (!r.manualOnly) out.push({ kind: 'recipe', recipe: r });
-      }
-    } else {
-      const recipes =
-        lookingFor === 'consumer'
-          ? getRecipesConsuming(gameData, itemId)
-          : getRecipesProducing(gameData, itemId);
-      for (const r of recipes) {
-        if (!r.manualOnly) out.push({ kind: 'recipe', recipe: r });
-      }
-    }
-    const matchKind = lookingFor === 'consumer' ? 'input' : 'output';
-    for (const bp of placeableBlueprints) {
-      if (isUnset) {
-        out.push({ kind: 'blueprint', bp });
-        continue;
-      }
-      const matches = bp.nodes.some(
-        (n) => n.data.kind === matchKind && n.data.itemId === itemId,
-      );
-      if (matches) out.push({ kind: 'blueprint', bp });
-    }
     return out;
-  }, [allowInterface, isUnset, itemId, lookingFor, placeableBlueprints]);
+  }, [allowInterface, needsItemPick, effectiveItemId, lookingFor, placeableBlueprints]);
 
   const filtered = useMemo<Candidate[]>(() => {
     const q = query.trim().toLowerCase();
     if (!q) return candidates;
     return candidates.filter((c) => {
+      if (c.kind === 'item') return c.item.name.toLowerCase().includes(q);
       if (c.kind === 'recipe') return c.recipe.name.toLowerCase().includes(q);
       if (c.kind === 'blueprint') return c.bp.name.toLowerCase().includes(q);
       if (c.kind === 'hublike') return c.which.includes(q);
@@ -137,7 +162,7 @@ export default function DragDropMenu({
     });
   }, [query, candidates]);
 
-  useEffect(() => setActiveIndex(0), [query, itemId, handleType]);
+  useEffect(() => setActiveIndex(0), [query, itemId, handleType, pickedItem]);
 
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`);
@@ -145,8 +170,16 @@ export default function DragDropMenu({
   }, [activeIndex]);
 
   const pick = (c: Candidate) => {
-    if (c.kind === 'recipe') onPick({ kind: 'recipe', recipeId: c.recipe.id });
-    else if (c.kind === 'blueprint') onPick({ kind: 'blueprint', blueprintId: c.bp.id });
+    if (c.kind === 'item') {
+      // Stage-A item pick advances to stage B without calling onPick.
+      setPickedItem(c.item);
+      setQuery('');
+      return;
+    }
+    const resolvedItemId = effectiveItemId || undefined;
+    if (c.kind === 'recipe') onPick({ kind: 'recipe', recipeId: c.recipe.id, resolvedItemId });
+    else if (c.kind === 'blueprint')
+      onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
     else if (c.kind === 'hublike') onPick({ kind: 'hublike', which: c.which });
     else onPick({ kind: 'interface', which: c.which });
   };
@@ -176,7 +209,12 @@ export default function DragDropMenu({
       style={{ left, top, width: MENU_W, height: MENU_H }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <Header item={item} lookingFor={lookingFor} isUnset={isUnset} />
+      <Header
+        item={item}
+        lookingFor={lookingFor}
+        needsItemPick={needsItemPick}
+        onBack={pickedItem ? () => { setPickedItem(null); setQuery(''); } : undefined}
+      />
       <div className="relative border-b border-border p-2">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7388]" />
         <input
@@ -185,7 +223,7 @@ export default function DragDropMenu({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search..."
+          placeholder={needsItemPick ? 'Search items...' : 'Search...'}
           className="w-full rounded border border-border bg-panel-hi py-1.5 pl-8 pr-2 text-sm text-[#e6e8ee] outline-none focus:border-accent"
         />
       </div>
@@ -200,6 +238,18 @@ export default function DragDropMenu({
           const active = i === activeIndex;
           const hover = () => setActiveIndex(i);
           const onPickRow = () => pick(c);
+          if (c.kind === 'item') {
+            return (
+              <ItemRowButton
+                key={`item-${c.item.id}`}
+                item={c.item}
+                index={i}
+                active={active}
+                onHover={hover}
+                onPick={onPickRow}
+              />
+            );
+          }
           if (c.kind === 'interface') {
             const accent = c.which === 'input' ? 'text-sky-300' : 'text-fuchsia-300';
             return (
@@ -264,23 +314,36 @@ export default function DragDropMenu({
   );
 }
 
+const HEADER_LABEL: Record<'browse' | 'item', Record<'consumer' | 'producer', string>> = {
+  browse: { consumer: 'Consume item', producer: 'Produce item' },
+  item: { consumer: 'Consume', producer: 'Produce' },
+};
+
 function Header({
   item,
   lookingFor,
-  isUnset,
+  needsItemPick,
+  onBack,
 }: {
   item: { name: string; icon?: string } | undefined;
   lookingFor: 'consumer' | 'producer';
-  isUnset: boolean;
+  needsItemPick: boolean;
+  onBack?: () => void;
 }) {
-  const label = isUnset
-    ? 'Connect to'
-    : lookingFor === 'consumer'
-      ? 'Consume'
-      : 'Produce';
+  const label = HEADER_LABEL[needsItemPick ? 'browse' : 'item'][lookingFor];
   return (
     <div className="flex items-center gap-2 border-b border-border bg-panel-hi px-3 py-2">
-      <ArrowRight className="h-3.5 w-3.5 text-accent" />
+      {onBack ? (
+        <button
+          onClick={onBack}
+          title="Back to items"
+          className="rounded p-0.5 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <ArrowRight className="h-3.5 w-3.5 text-accent" />
+      )}
       <span className="text-xs uppercase tracking-wider text-[#9aa2b8]">{label}</span>
       {item && (
         <>
@@ -347,36 +410,15 @@ function RecipeRow({
   onHover: () => void;
   onPick: () => void;
 }) {
-  const machine = gameData.machines[recipe.machineId];
-  const io = itemId
-    ? lookingFor === 'producer'
-      ? recipe.products.find((p) => p.itemId === itemId)
-      : recipe.ingredients.find((i) => i.itemId === itemId)
-    : undefined;
-  const rate = io ? (io.amount * 60) / recipe.durationSec : 0;
   return (
     <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
-      <IconOrLabel iconBasename={machine?.icon} name={machine?.name ?? '?'} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate">{recipe.name}</span>
-          {recipe.alternate && (
-            <span className="shrink-0 rounded border border-accent/40 px-1 text-[9px] uppercase tracking-wider text-accent">
-              Alt
-            </span>
-          )}
-        </div>
-        <div className="truncate text-[10px] text-[#6b7388]">
-          {recipe.ingredients
-            .map((ing) => gameData.items[ing.itemId]?.name ?? ing.itemId)
-            .join(' + ') || '—'}
-          {' → '}
-          {recipe.products
-            .map((p) => gameData.items[p.itemId]?.name ?? p.itemId)
-            .join(' + ')}
-        </div>
-      </div>
-      {io && <span className="shrink-0 text-[10px] text-[#6b7388]">{rate.toFixed(1)}/min</span>}
+      <RecipeRowContent
+        recipe={recipe}
+        itemId={itemId || undefined}
+        side={lookingFor}
+        showIngredientPreview
+        showRate
+      />
     </PickerRow>
   );
 }

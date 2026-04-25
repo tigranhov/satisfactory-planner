@@ -41,6 +41,15 @@ interface GraphState {
   updateNode: (graphId: GraphId, nodeId: NodeId, patch: Partial<GraphNode>) => void;
   removeNode: (graphId: GraphId, nodeId: NodeId) => void;
   addEdge: (graphId: GraphId, edge: Omit<GraphEdge, 'id'>) => void;
+  // Batch-insert: the caller receives the new node ids in order so it can
+  // stitch into edges it builds from them. Edges reference real node ids.
+  // One `set` call drives a single subscriber notification regardless of
+  // batch size — important for auto-fill which places many nodes at once.
+  addNodesAndEdges: (
+    graphId: GraphId,
+    nodes: Array<{ position: { x: number; y: number }; data: NodeData }>,
+    edgesFrom: (newIds: NodeId[]) => Array<Omit<GraphEdge, 'id'>>,
+  ) => NodeId[];
   removeEdge: (graphId: GraphId, edgeId: string) => void;
   setNodes: (graphId: GraphId, nodes: GraphNode[]) => void;
   setEdges: (graphId: GraphId, edges: GraphEdge[]) => void;
@@ -138,6 +147,35 @@ export const useGraphStore = create<GraphState>((set) => ({
         },
       };
     }),
+
+  addNodesAndEdges: (graphId, nodesSpec, edgesFrom) => {
+    const ids: NodeId[] = [];
+    for (let i = 0; i < nodesSpec.length; i++) ids.push(newNodeId());
+    set((s) => {
+      const g = s.graphs[graphId];
+      if (!g) return s;
+      const addedNodes: GraphNode[] = nodesSpec.map((n, i) => ({
+        id: ids[i],
+        position: n.position,
+        data: n.data,
+      }));
+      const addedEdges: GraphEdge[] = edgesFrom(ids).map((e) => ({
+        ...e,
+        id: newEdgeId(),
+      }));
+      return {
+        graphs: {
+          ...s.graphs,
+          [graphId]: {
+            ...g,
+            nodes: [...g.nodes, ...addedNodes],
+            edges: [...g.edges, ...addedEdges],
+          },
+        },
+      };
+    });
+    return ids;
+  },
 
   removeEdge: (graphId, edgeId) =>
     set((s) => {

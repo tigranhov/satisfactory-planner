@@ -304,7 +304,10 @@ export function normalize(src: SatisfactoryToolsData, gameVersion = 'st-master')
       : machine.powerMW;
     recipes[r.slug] = {
       id: r.slug,
-      name: r.name,
+      // "Alternate: X" → "X". The `alternate: true` flag below retains the
+      // alt-vs-default distinction (the UI renders an alt badge off it), so
+      // the prefix would only be redundant chrome in every rendered name.
+      name: r.name.replace(/^Alternate:\s+/, ''),
       ingredients: mapIO(r.ingredients, false),
       products: mapIO(r.products, true),
       durationSec: r.time,

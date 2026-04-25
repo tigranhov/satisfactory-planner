@@ -2655,7 +2655,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Adhered Iron Plate",
+      "name": "Adhered Iron Plate",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2682,7 +2682,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Alclad Casing",
+      "name": "Alclad Casing",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2717,7 +2717,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Automated Miner",
+      "name": "Automated Miner",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -2748,7 +2748,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Crystal Beacon",
+      "name": "Crystal Beacon",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -2775,7 +2775,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Bolted Frame",
+      "name": "Bolted Frame",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2802,7 +2802,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Insulated Cable",
+      "name": "Insulated Cable",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2829,7 +2829,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Quickwire Cable",
+      "name": "Quickwire Cable",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2856,7 +2856,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Silicon Circuit Board",
+      "name": "Silicon Circuit Board",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2883,7 +2883,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Caterium Circuit Board",
+      "name": "Caterium Circuit Board",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -2918,7 +2918,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Classic Battery",
+      "name": "Classic Battery",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -2941,7 +2941,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Charcoal",
+      "name": "Charcoal",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -2964,7 +2964,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Biocoal",
+      "name": "Biocoal",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -2991,7 +2991,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Coated Cable",
+      "name": "Coated Cable",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -3018,7 +3018,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Coated Iron Canister",
+      "name": "Coated Iron Canister",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3045,7 +3045,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Coated Iron Plate",
+      "name": "Coated Iron Plate",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3072,7 +3072,7 @@
         }
       ],
       "machineId": "foundry",
-      "name": "Alternate: Coke Steel Ingot",
+      "name": "Coke Steel Ingot",
       "powerMW": 16,
       "producedIn": [
         "foundry"
@@ -3103,7 +3103,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Caterium Computer",
+      "name": "Caterium Computer",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3130,7 +3130,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Crystal Computer",
+      "name": "Crystal Computer",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3157,7 +3157,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Fine Concrete",
+      "name": "Fine Concrete",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3188,7 +3188,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Cooling Device",
+      "name": "Cooling Device",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -3215,7 +3215,7 @@
         }
       ],
       "machineId": "foundry",
-      "name": "Alternate: Copper Alloy Ingot",
+      "name": "Copper Alloy Ingot",
       "powerMW": 16,
       "producedIn": [
         "foundry"
@@ -3242,7 +3242,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Copper Rotor",
+      "name": "Copper Rotor",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3273,7 +3273,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Insulated Crystal Oscillator",
+      "name": "Insulated Crystal Oscillator",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3300,7 +3300,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Diluted Fuel",
+      "name": "Diluted Fuel",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -3327,7 +3327,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Diluted Packaged Fuel",
+      "name": "Diluted Packaged Fuel",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -3354,7 +3354,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Electric Motor",
+      "name": "Electric Motor",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3381,7 +3381,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Electrode Aluminum Scrap",
+      "name": "Electrode Aluminum Scrap",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -3413,7 +3413,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Electrode Circuit Board",
+      "name": "Electrode Circuit Board",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3440,7 +3440,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Electromagnetic Connection Rod",
+      "name": "Electromagnetic Connection Rod",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3467,7 +3467,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Encased Industrial Pipe",
+      "name": "Encased Industrial Pipe",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3494,7 +3494,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Compacted Coal",
+      "name": "Compacted Coal",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3529,7 +3529,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Fertile Uranium",
+      "name": "Fertile Uranium",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -3565,7 +3565,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Flexible Framework",
+      "name": "Flexible Framework",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3592,7 +3592,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Fused Wire",
+      "name": "Fused Wire",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3619,7 +3619,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Fine Black Powder",
+      "name": "Fine Black Powder",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3654,7 +3654,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Heat-Fused Frame",
+      "name": "Heat-Fused Frame",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -3681,7 +3681,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Heat Exchanger",
+      "name": "Heat Exchanger",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -3716,7 +3716,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Heavy Flexible Frame",
+      "name": "Heavy Flexible Frame",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3739,7 +3739,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Heavy Oil Residue",
+      "name": "Heavy Oil Residue",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -3775,7 +3775,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Silicon High-Speed Connector",
+      "name": "Silicon High-Speed Connector",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3806,7 +3806,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Automated Speed Wiring",
+      "name": "Automated Speed Wiring",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -3833,7 +3833,7 @@
         }
       ],
       "machineId": "foundry",
-      "name": "Alternate: Iron Alloy Ingot",
+      "name": "Iron Alloy Ingot",
       "powerMW": 16,
       "producedIn": [
         "foundry"
@@ -3860,7 +3860,7 @@
         }
       ],
       "machineId": "foundry",
-      "name": "Alternate: Solid Steel Ingot",
+      "name": "Solid Steel Ingot",
       "powerMW": 16,
       "producedIn": [
         "foundry"
@@ -3887,7 +3887,7 @@
         }
       ],
       "machineId": "foundry",
-      "name": "Alternate: Compacted Steel Ingot",
+      "name": "Compacted Steel Ingot",
       "powerMW": 16,
       "producedIn": [
         "foundry"
@@ -3914,7 +3914,7 @@
         }
       ],
       "machineId": "particle-accelerator",
-      "name": "Alternate: Instant Plutonium Cell",
+      "name": "Instant Plutonium Cell",
       "powerMW": 500,
       "producedIn": [
         "particle-accelerator"
@@ -3953,7 +3953,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Instant Scrap",
+      "name": "Instant Scrap",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -3985,7 +3985,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Steeled Frame",
+      "name": "Steeled Frame",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4020,7 +4020,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Heavy Encased Frame",
+      "name": "Heavy Encased Frame",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4051,7 +4051,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Rigour Motor",
+      "name": "Rigour Motor",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4086,7 +4086,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Uranium Fuel Unit",
+      "name": "Uranium Fuel Unit",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4113,7 +4113,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: OC Supercomputer",
+      "name": "OC Supercomputer",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4140,7 +4140,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Recycled Plastic",
+      "name": "Recycled Plastic",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4171,7 +4171,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Plastic Smart Plating",
+      "name": "Plastic Smart Plating",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4198,7 +4198,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Plutonium Fuel Unit",
+      "name": "Plutonium Fuel Unit",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4225,7 +4225,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Polyester Fabric",
+      "name": "Polyester Fabric",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4248,7 +4248,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Polymer Resin",
+      "name": "Polymer Resin",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4280,7 +4280,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Pure Caterium Ingot",
+      "name": "Pure Caterium Ingot",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4307,7 +4307,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Pure Copper Ingot",
+      "name": "Pure Copper Ingot",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4334,7 +4334,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Pure Iron Ingot",
+      "name": "Pure Iron Ingot",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4361,7 +4361,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Pure Quartz Crystal",
+      "name": "Pure Quartz Crystal",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4388,7 +4388,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Fused Quickwire",
+      "name": "Fused Quickwire",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4423,7 +4423,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Radio Control System",
+      "name": "Radio Control System",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4454,7 +4454,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Radio Connection Unit",
+      "name": "Radio Connection Unit",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4481,7 +4481,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Recycled Rubber",
+      "name": "Recycled Rubber",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4508,7 +4508,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Bolted Iron Plate",
+      "name": "Bolted Iron Plate",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4535,7 +4535,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Stitched Iron Plate",
+      "name": "Stitched Iron Plate",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4562,7 +4562,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Steel Rotor",
+      "name": "Steel Rotor",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4589,7 +4589,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Rubber Concrete",
+      "name": "Rubber Concrete",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4612,7 +4612,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Steel Screw",
+      "name": "Steel Screw",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -4635,7 +4635,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Cast Screw",
+      "name": "Cast Screw",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -4662,7 +4662,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Cheap Silica",
+      "name": "Cheap Silica",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4689,7 +4689,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Sloppy Alumina",
+      "name": "Sloppy Alumina",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4716,7 +4716,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Quickwire Stator",
+      "name": "Quickwire Stator",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4743,7 +4743,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Steamed Copper Sheet",
+      "name": "Steamed Copper Sheet",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4766,7 +4766,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Steel Canister",
+      "name": "Steel Canister",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -4793,7 +4793,7 @@
         }
       ],
       "machineId": "assembler",
-      "name": "Alternate: Steel Coated Plate",
+      "name": "Steel Coated Plate",
       "powerMW": 15,
       "producedIn": [
         "assembler"
@@ -4816,7 +4816,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Steel Rod",
+      "name": "Steel Rod",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -4851,7 +4851,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Super-State Computer",
+      "name": "Super-State Computer",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -4886,7 +4886,7 @@
         }
       ],
       "machineId": "blender",
-      "name": "Alternate: Turbo Blend Fuel",
+      "name": "Turbo Blend Fuel",
       "powerMW": 75,
       "producedIn": [
         "blender"
@@ -4940,7 +4940,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Turbo Heavy Fuel",
+      "name": "Turbo Heavy Fuel",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -4975,7 +4975,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Turbo Electric Motor",
+      "name": "Turbo Electric Motor",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -5010,7 +5010,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Turbo Pressure Motor",
+      "name": "Turbo Pressure Motor",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -5045,7 +5045,7 @@
         }
       ],
       "machineId": "manufacturer",
-      "name": "Alternate: Infused Uranium Cell",
+      "name": "Infused Uranium Cell",
       "powerMW": 55,
       "producedIn": [
         "manufacturer"
@@ -5072,7 +5072,7 @@
         }
       ],
       "machineId": "refinery",
-      "name": "Alternate: Wet Concrete",
+      "name": "Wet Concrete",
       "powerMW": 30,
       "producedIn": [
         "refinery"
@@ -5095,7 +5095,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Iron Wire",
+      "name": "Iron Wire",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -5118,7 +5118,7 @@
         }
       ],
       "machineId": "constructor",
-      "name": "Alternate: Caterium Wire",
+      "name": "Caterium Wire",
       "powerMW": 4,
       "producedIn": [
         "constructor"
@@ -7389,7 +7389,7 @@
         }
       ],
       "machineId": "smelter",
-      "name": "Alternate: Pure Aluminum Ingot",
+      "name": "Pure Aluminum Ingot",
       "powerMW": 4,
       "producedIn": [
         "smelter"

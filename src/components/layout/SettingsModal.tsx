@@ -1,0 +1,169 @@
+import { useEffect } from 'react';
+import { Settings, X } from 'lucide-react';
+import {
+  useUiStore,
+  type ClockStrategy,
+  type GroupingStrategy,
+} from '@/store/uiStore';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+interface ClockOption {
+  value: ClockStrategy;
+  label: string;
+  description: string;
+}
+
+interface GroupingOption {
+  value: GroupingStrategy;
+  label: string;
+  description: string;
+}
+
+const CLOCK_STRATEGIES: ClockOption[] = [
+  {
+    value: 'partial-last',
+    label: 'N−1 @ 100% + 1 partial',
+    description:
+      'Run as many 100% machines as fit, underclock only the last one to absorb the remainder. Fewer machines, higher power per unit.',
+  },
+  {
+    value: 'uniform',
+    label: 'All uniform',
+    description:
+      'Run all N machines at the same partial clock so nothing idles. More machines, lowest total power — power is superlinear with clock.',
+  },
+];
+
+const GROUPING_STRATEGIES: GroupingOption[] = [
+  {
+    value: 'combined',
+    label: 'Combine same-clock machines',
+    description:
+      'One node per clock bucket with its machine count. A 2×100% + 1×33% plan becomes two nodes instead of three. Tidier canvas.',
+  },
+  {
+    value: 'split',
+    label: 'One node per machine',
+    description:
+      'Every machine is its own recipe node with count=1. Useful when you want to tweak or annotate each machine individually.',
+  },
+];
+
+export default function SettingsModal({ open, onClose }: Props) {
+  const clockStrategy = useUiStore((s) => s.clockStrategy);
+  const setClockStrategy = useUiStore((s) => s.setClockStrategy);
+  const groupingStrategy = useUiStore((s) => s.groupingStrategy);
+  const setGroupingStrategy = useUiStore((s) => s.setGroupingStrategy);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onMouseDown={onClose}
+    >
+      <div
+        className="flex w-[520px] max-w-[95vw] max-h-[90vh] flex-col overflow-hidden rounded-lg border border-border bg-panel shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-border bg-panel-hi px-4 py-2.5">
+          <Settings className="h-4 w-4 text-accent" />
+          <span className="text-sm font-medium">Settings</span>
+          <button
+            onClick={onClose}
+            className="ml-auto rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"
+            title="Close (Esc)"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <SettingSection
+            heading="Auto-fill clock strategy"
+            blurb="How the machine count and clock speeds are computed when auto-filling a recipe node's inputs."
+          >
+            {CLOCK_STRATEGIES.map((opt) => (
+              <StrategyButton
+                key={opt.value}
+                active={clockStrategy === opt.value}
+                label={opt.label}
+                description={opt.description}
+                onClick={() => setClockStrategy(opt.value)}
+              />
+            ))}
+          </SettingSection>
+
+          <SettingSection
+            heading="Auto-fill node grouping"
+            blurb="Whether multiple same-clock machines get collapsed into one count-based node, or placed as individual nodes."
+          >
+            {GROUPING_STRATEGIES.map((opt) => (
+              <StrategyButton
+                key={opt.value}
+                active={groupingStrategy === opt.value}
+                label={opt.label}
+                description={opt.description}
+                onClick={() => setGroupingStrategy(opt.value)}
+              />
+            ))}
+          </SettingSection>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface SettingSectionProps {
+  heading: string;
+  blurb: string;
+  children: React.ReactNode;
+}
+
+function SettingSection({ heading, blurb, children }: SettingSectionProps) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] uppercase tracking-wider text-[#6b7388]">
+        {heading}
+      </div>
+      <div className="mb-3 text-xs text-[#9aa2b8]">{blurb}</div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
+
+interface StrategyButtonProps {
+  active: boolean;
+  label: string;
+  description: string;
+  onClick: () => void;
+}
+
+function StrategyButton({ active, label, description, onClick }: StrategyButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col gap-1 rounded border px-3 py-2 text-left transition-colors ${
+        active
+          ? 'border-accent bg-accent/10'
+          : 'border-border bg-panel-hi hover:border-accent/50'
+      }`}
+    >
+      <span className={`text-sm font-medium ${active ? 'text-accent' : ''}`}>{label}</span>
+      <span className="text-[11px] text-[#9aa2b8]">{description}</span>
+    </button>
+  );
+}

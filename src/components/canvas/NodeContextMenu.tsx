@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Copy, Package, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Package, Pencil, Trash2, Wand2 } from 'lucide-react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
 import CountEditor from './editors/CountEditor';
@@ -40,6 +40,7 @@ interface Props {
   onDuplicate: () => void;
   onExtract?: () => void;
   onEdit?: () => void;
+  onAutoFill?: () => void;
   status?: NodeStatus;
   onStatusChange?: (status: NodeStatus | undefined) => void;
   note?: string;
@@ -57,6 +58,7 @@ export default function NodeContextMenu({
   onDuplicate,
   onExtract,
   onEdit,
+  onAutoFill,
   status,
   onStatusChange,
   note,
@@ -88,6 +90,18 @@ export default function NodeContextMenu({
           {count > 1 ? `${count} nodes selected` : 'Node'}
         </span>
         <div className="flex items-center gap-1">
+          {onAutoFill && (
+            <button
+              onClick={() => {
+                onAutoFill();
+                onClose();
+              }}
+              title="Auto-fill inputs"
+              className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={() => {

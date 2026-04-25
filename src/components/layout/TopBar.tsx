@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   RotateCw,
+  Settings,
   Trash2,
 } from 'lucide-react';
 import { useGraphStore } from '@/store/graphStore';
@@ -20,6 +21,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUiStore } from '@/store/uiStore';
 import { newGraphId } from '@/lib/ids';
 import BlueprintBook from '@/components/blueprints/BlueprintBook';
+import SettingsModal from './SettingsModal';
 import InlineItemText from '@/components/ui/InlineItemText';
 import {
   createProjectPersistent,
@@ -31,6 +33,7 @@ import { useUpdater } from '@/hooks/useUpdater';
 
 export default function TopBar() {
   const [bookOpen, setBookOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const stack = useNavigationStore((s) => s.stack);
   const popTo = useNavigationStore((s) => s.popTo);
   const graphs = useGraphStore((s) => s.graphs);
@@ -105,8 +108,16 @@ export default function TopBar() {
           <Plus className="h-4 w-4" />
           Factory
         </button>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="rounded bg-panel-hi p-1.5 text-[#9aa2b8] hover:bg-border hover:text-[#e6e8ee]"
+          title="Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
       </div>
       <BlueprintBook open={bookOpen} onClose={() => setBookOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

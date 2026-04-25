@@ -27,6 +27,8 @@ let recipesByMachine: Map<string, Recipe[]> = new Map();
 let itemsByCategory: Record<string, Item[]> = {};
 let sortedRecipeList: Recipe[] = [];
 let sortedItemList: Item[] = [];
+let producibleItems: Item[] = [];
+let consumableItems: Item[] = [];
 let itemNameLower: Map<string, string> = new Map();
 let recipeNameLower: Map<string, string> = new Map();
 let itemByNameLower: Map<string, Item> = new Map();
@@ -74,10 +76,33 @@ function rebuildIndices(d: GameData) {
 
   sortedRecipeList = Object.values(d.recipes)
     .filter((r) => !r.manualOnly)
-    .sort((a, b) => {
-      if (a.alternate !== b.alternate) return a.alternate ? 1 : -1;
-      return a.name.localeCompare(b.name);
-    });
+    .sort(recipeDefaultFirst);
+
+  // recipesProducing/Consuming are built in raw iteration order above; sort
+  // each bucket so callers (auto-fill picker, drag-drop menu) get standard
+  // recipes ahead of alternates and a stable alphabetical tail.
+  for (const arr of recipesProducing.values()) arr.sort(recipeDefaultFirst);
+  for (const arr of recipesConsuming.values()) arr.sort(recipeDefaultFirst);
+  for (const arr of recipesByMachine.values()) arr.sort(recipeDefaultFirst);
+
+  // Items with at least one non-manual recipe on the producing or consuming
+  // side. Drives the first-stage pickers in CanvasContextMenu and DragDropMenu.
+  producibleItems = buildItemBucket(d, recipesProducing);
+  consumableItems = buildItemBucket(d, recipesConsuming);
+}
+
+function buildItemBucket(d: GameData, index: Map<string, Recipe[]>): Item[] {
+  const out: Item[] = [];
+  for (const item of Object.values(d.items)) {
+    const list = index.get(item.id);
+    if (list && list.some((r) => !r.manualOnly)) out.push(item);
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function recipeDefaultFirst(a: Recipe, b: Recipe): number {
+  if (a.alternate !== b.alternate) return a.alternate ? 1 : -1;
+  return a.name.localeCompare(b.name);
 }
 
 export function getRecipeList(d: GameData): Recipe[] {
@@ -103,6 +128,16 @@ export function getRecipesByMachine(d: GameData, machineId: string): Recipe[] {
 export function getItemsByCategory(d: GameData): Record<string, Item[]> {
   rebuildIndices(d);
   return itemsByCategory;
+}
+
+export function getProducibleItems(d: GameData): Item[] {
+  rebuildIndices(d);
+  return producibleItems;
+}
+
+export function getConsumableItems(d: GameData): Item[] {
+  rebuildIndices(d);
+  return consumableItems;
 }
 
 export function getAllItemsSorted(d: GameData): Item[] {

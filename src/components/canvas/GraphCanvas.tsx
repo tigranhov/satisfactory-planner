@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -28,6 +28,14 @@ import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
 import EdgeContextMenu from './EdgeContextMenu';
 import DragDropMenu, { type DragDropChoice } from './DragDropMenu';
+import AutoFillModal from './AutoFillModal';
+import {
+  applyAutoFillResult,
+  computeAutoFill,
+  describeIngredients,
+  type InputSelection,
+  type OccupiedRect,
+} from '@/lib/autoFill';
 import { computeFlows, type HandleFlow, type SubgraphResolver } from '@/models/flow';
 import { useSubgraphResolver } from '@/hooks/useSubgraphResolver';
 import {
@@ -40,6 +48,8 @@ import {
   handleIdForIngredient,
   handleIdForInterface,
   handleIdForProduct,
+  handleIdForSubgraphInput,
+  handleIdForSubgraphOutput,
   isHublikeKind,
   itemIdForHandle,
   itemsPerMinute,
@@ -61,7 +71,7 @@ import type {
   NodeStatus,
   RecipeNodeData,
 } from '@/models/graph';
-import { useUiStore } from '@/store/uiStore';
+import { useUiStore, getClockStrategy, getGroupingStrategy } from '@/store/uiStore';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -95,10 +105,26 @@ const nodeTypes = {
   merger: MergerNode,
 };
 
-function reactFlowTypeForKind(kind: NodeData['kind']): string {
+type ReactFlowNodeType = keyof typeof nodeTypes;
+
+function reactFlowTypeForKind(kind: NodeData['kind']): ReactFlowNodeType {
   return kind === 'input' || kind === 'output' ? 'interface' : kind;
 }
 const edgeTypes = { rate: RateEdge };
+
+// Fallback dimensions per React Flow node `type` when a node hasn't been
+// measured yet (first render after load). Conservative so the layout errs
+// on the side of leaving too much space rather than overlapping.
+function estimateNodeWidth(type: ReactFlowNodeType | undefined): number {
+  if (type === 'interface') return 180;
+  if (type === 'hub' || type === 'splitter' || type === 'merger') return 200;
+  return 260;
+}
+function estimateNodeHeight(type: ReactFlowNodeType | undefined): number {
+  if (type === 'interface') return 72;
+  if (type === 'hub' || type === 'splitter' || type === 'merger') return 80;
+  return 180;
+}
 
 function singleSelectedNodeOfKind<K extends NodeData['kind']>(
   graph: Graph | undefined,
@@ -172,6 +198,7 @@ export default function GraphCanvas() {
   const { screenToFlowPosition, setCenter } = useReactFlow();
   const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
   const clearPendingFocus = useUiStore((s) => s.clearPendingFocus);
+  const clockStrategy = useUiStore((s) => s.clockStrategy);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // React Flow's internal state must own the nodes array: it mutates it in place to
@@ -192,6 +219,7 @@ export default function GraphCanvas() {
     screen: { x: number; y: number };
     edgeId: string;
   } | null>(null);
+  const [autoFillTarget, setAutoFillTarget] = useState<{ nodeId: string } | null>(null);
   const [dragMenu, setDragMenu] = useState<{
     screen: { x: number; y: number };
     flow: { x: number; y: number };
@@ -242,11 +270,16 @@ export default function GraphCanvas() {
     clearPendingFocus();
   }, [nodes, pendingFocusNodeId, setCenter, clearPendingFocus]);
 
+  // React Flow fires drag-stop with the primary node plus every node that
+  // moved with it (multi-select drag). Persist all of them — updating only
+  // the primary leaves siblings stale in graphStore, and the next sync tick
+  // snaps them back to their pre-drag coordinates.
   const onNodeDragStop = useCallback(
-    (_e: React.MouseEvent, node: Node) => {
-      const g = store.getState().graphs[activeGraphId];
-      if (!g) return;
-      store.getState().updateNode(activeGraphId, node.id, { position: node.position });
+    (_e: React.MouseEvent, _node: Node, dragged: Node[]) => {
+      const state = store.getState();
+      for (const n of dragged) {
+        state.updateNode(activeGraphId, n.id, { position: n.position });
+      }
     },
     [activeGraphId, store],
   );
@@ -445,8 +478,15 @@ export default function GraphCanvas() {
   const onDragDropPick = useCallback(
     (choice: DragDropChoice) => {
       if (!dragMenu) return;
-      const { flow, sourceNodeId, sourceHandleId, sourceHandleType, itemId } = dragMenu;
+      const { flow, sourceNodeId, sourceHandleId, sourceHandleType, itemId: dragItemId } = dragMenu;
       const isFromSource = sourceHandleType === 'source';
+      // When the drag was unset the picker collects the user's item choice
+      // on stage A and passes it back as `resolvedItemId`. Committed drags
+      // already have dragMenu.itemId set.
+      const choiceItemId =
+        (choice.kind === 'recipe' || choice.kind === 'blueprint'
+          ? choice.resolvedItemId
+          : undefined) || dragItemId;
 
       let data: NodeData | null = null;
       let newHandle = '';
@@ -455,19 +495,57 @@ export default function GraphCanvas() {
         if (!recipe) return;
         data = { kind: 'recipe', recipeId: choice.recipeId, clockSpeed: 1, count: 1, somersloops: 0 };
         if (isFromSource) {
-          const idx = recipe.ingredients.findIndex((i) => i.itemId === itemId);
-          if (idx < 0) return;
-          newHandle = handleIdForIngredient(recipe.id, itemId, idx);
+          const list = recipe.ingredients;
+          const idx = choiceItemId ? list.findIndex((i) => i.itemId === choiceItemId) : 0;
+          const io = idx >= 0 ? list[idx] : list[0];
+          if (!io) return;
+          newHandle = handleIdForIngredient(recipe.id, io.itemId, idx >= 0 ? idx : 0);
         } else {
-          const idx = recipe.products.findIndex((p) => p.itemId === itemId);
-          if (idx < 0) return;
-          newHandle = handleIdForProduct(recipe.id, itemId, idx);
+          const list = recipe.products;
+          const idx = choiceItemId ? list.findIndex((p) => p.itemId === choiceItemId) : 0;
+          const io = idx >= 0 ? list[idx] : list[0];
+          if (!io) return;
+          newHandle = handleIdForProduct(recipe.id, io.itemId, idx >= 0 ? idx : 0);
         }
       } else if (choice.kind === 'blueprint') {
-        // Blueprint placement doesn't return a synchronous node id we can
-        // wire into a new edge — drop the blueprint at the cursor and
-        // leave the auto-connect as a follow-up.
-        placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+        // Blueprint nodes expose subgraph handles at `bpi-in:<id>:<itemId>` /
+        // `bpi-out:<id>:<itemId>`, one per matching Input/Output boundary
+        // inside the blueprint. Find the boundary node that matches our
+        // direction + item and wire to its outer handle.
+        const bpGraph = resolver(choice.blueprintId);
+        if (!bpGraph || !choiceItemId) {
+          placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+          setDragMenu(null);
+          return;
+        }
+        const boundaryKind = isFromSource ? 'input' : 'output';
+        const boundary = bpGraph.nodes.find(
+          (n) => n.data.kind === boundaryKind && n.data.itemId === choiceItemId,
+        );
+        const newNodeId = placeBlueprintOnActiveGraph(choice.blueprintId, flow);
+        if (!newNodeId || !boundary) {
+          setDragMenu(null);
+          return;
+        }
+        const bpHandle =
+          boundaryKind === 'input'
+            ? handleIdForSubgraphInput(boundary.id, choiceItemId)
+            : handleIdForSubgraphOutput(boundary.id, choiceItemId);
+        if (isFromSource) {
+          commitAndAddEdge({
+            source: sourceNodeId,
+            sourceHandle: sourceHandleId,
+            target: newNodeId,
+            targetHandle: bpHandle,
+          });
+        } else {
+          commitAndAddEdge({
+            source: newNodeId,
+            sourceHandle: bpHandle,
+            target: sourceNodeId,
+            targetHandle: sourceHandleId,
+          });
+        }
         setDragMenu(null);
         return;
       } else if (choice.kind === 'hublike') {
@@ -505,7 +583,7 @@ export default function GraphCanvas() {
 
       setDragMenu(null);
     },
-    [activeGraphId, commitAndAddEdge, dragMenu, store],
+    [activeGraphId, commitAndAddEdge, dragMenu, resolver, store],
   );
 
   const isSubgraph = activeGraphId !== ROOT_GRAPH_ID;
@@ -725,6 +803,31 @@ export default function GraphCanvas() {
     [activeGraphId, store],
   );
 
+  const applyAutoFill = useCallback(
+    (targetNodeId: string, selections: InputSelection[]) => {
+      const g = store.getState().graphs[activeGraphId];
+      const target = g?.nodes.find((n) => n.id === targetNodeId);
+      if (!target) return;
+      // React Flow already measured existing nodes; feed those rects to the
+      // layout so new nodes stack past (not onto) whatever is already placed.
+      const occupied: OccupiedRect[] = nodesRef.current.map((n) => ({
+        x: n.position.x,
+        y: n.position.y,
+        width: n.measured?.width ?? estimateNodeWidth(n.type as ReactFlowNodeType | undefined),
+        height: n.measured?.height ?? estimateNodeHeight(n.type as ReactFlowNodeType | undefined),
+      }));
+      const result = computeAutoFill(targetNodeId, target.position, selections, gameData, {
+        clockStrategy: getClockStrategy(),
+        grouping: getGroupingStrategy(),
+        occupied,
+      });
+      applyAutoFillResult(result, (nodeSpecs, edgesFrom) => {
+        store.getState().addNodesAndEdges(activeGraphId, nodeSpecs, edgesFrom);
+      });
+    },
+    [activeGraphId, store],
+  );
+
   const nodeMenuBlueprint = (() => {
     const base = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'blueprint');
     if (!base) return null;
@@ -733,35 +836,50 @@ export default function GraphCanvas() {
 
   const nodeMenuFactory = singleSelectedNodeOfKind(activeGraph, nodeMenuTargets, 'factory');
 
-  const setNodeStatus = useCallback(
-    (nodeIds: Set<string>, status: NodeStatus | undefined) => {
+  // Auto-fill shows only when the menu targets a single recipe node that has
+  // at least one disconnected, non-raw ingredient we can actually fill.
+  // Memoized so the ingredient scan doesn't re-run on every unrelated render.
+  const nodeMenuAutoFillable = useMemo(() => {
+    if (!nodeMenuRecipe || !activeGraph) return false;
+    const recipe = gameData.recipes[nodeMenuRecipe.data.recipeId];
+    if (!recipe) return false;
+    const rows = describeIngredients(
+      recipe,
+      nodeMenuRecipe.data,
+      activeGraph.edges,
+      nodeMenuRecipe.nodeId,
+      gameData,
+    );
+    return rows.some((r) => !r.connected && !r.raw && r.availableRecipes.length > 0);
+  }, [nodeMenuRecipe, activeGraph]);
+
+  // Shared helper for the per-node-field bulk edits driven by the context
+  // menu — lets setNodeStatus / setNodeNote stay one-liners.
+  const patchNodesData = useCallback(
+    (nodeIds: Set<string>, patch: (data: NodeData) => Partial<NodeData>) => {
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
       for (const id of nodeIds) {
         const node = g.nodes.find((n) => n.id === id);
         if (!node) continue;
         store.getState().updateNode(activeGraphId, id, {
-          data: { ...node.data, status },
+          data: { ...node.data, ...patch(node.data) } as NodeData,
         });
       }
     },
     [activeGraphId, store],
   );
 
+  const setNodeStatus = useCallback(
+    (nodeIds: Set<string>, status: NodeStatus | undefined) =>
+      patchNodesData(nodeIds, () => ({ status })),
+    [patchNodesData],
+  );
+
   const setNodeNote = useCallback(
-    (nodeIds: Set<string>, note: string) => {
-      const g = store.getState().graphs[activeGraphId];
-      if (!g) return;
-      const trimmed = note.length === 0 ? undefined : note;
-      for (const id of nodeIds) {
-        const node = g.nodes.find((n) => n.id === id);
-        if (!node) continue;
-        store.getState().updateNode(activeGraphId, id, {
-          data: { ...node.data, taskNote: trimmed },
-        });
-      }
-    },
-    [activeGraphId, store],
+    (nodeIds: Set<string>, note: string) =>
+      patchNodesData(nodeIds, () => ({ taskNote: note.length === 0 ? undefined : note })),
+    [patchNodesData],
   );
 
   // Collapse to `undefined` when the selection is mixed so the row shows no
@@ -869,6 +987,11 @@ export default function GraphCanvas() {
               ? () => openBlueprintForEditing(nodeMenuBlueprint.data.blueprintId)
               : undefined
           }
+          onAutoFill={
+            nodeMenuRecipe && nodeMenuAutoFillable
+              ? () => setAutoFillTarget({ nodeId: nodeMenuRecipe.nodeId })
+              : undefined
+          }
           recipe={
             nodeMenuRecipe
               ? {
@@ -924,6 +1047,17 @@ export default function GraphCanvas() {
           onPick={onDragDropPick}
         />
       )}
+      <AutoFillModal
+        open={!!autoFillTarget}
+        graphId={activeGraphId}
+        targetNodeId={autoFillTarget?.nodeId ?? null}
+        clockStrategy={clockStrategy}
+        onClose={() => setAutoFillTarget(null)}
+        onConfirm={(selections) => {
+          if (autoFillTarget) applyAutoFill(autoFillTarget.nodeId, selections);
+          setAutoFillTarget(null);
+        }}
+      />
     </div>
   );
 }

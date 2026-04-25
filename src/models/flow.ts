@@ -160,10 +160,54 @@ function topoSortHubs(
 
 const NO_RESOLVER: SubgraphResolver = () => undefined;
 
+// Water-fill demand across `group` edges so sources with spare capacity
+// absorb the shortfall of sibling sources that would otherwise be clipped.
+// An even split would leave the slack on the floor — parallel producers with
+// different clock speeds (e.g. 15+15+10 feeding a 40/min ingredient) need
+// this for the target to see its full supply. Converges in O(N) iterations.
+function distributeDemand(
+  group: GraphEdge[],
+  demand: number,
+  sourceCap: (e: GraphEdge) => number,
+  edgeRate: Map<string, number>,
+): void {
+  const N = group.length;
+  if (N === 0) return;
+  const caps = group.map(sourceCap);
+  const allocation = new Array<number>(N).fill(0);
+  const locked = new Array<boolean>(N).fill(false);
+  let unlocked = N;
+  let remaining = demand;
+
+  while (remaining > FLOW_EPS && unlocked > 0) {
+    const per = remaining / unlocked;
+    let newlyLocked = false;
+    for (let i = 0; i < N; i++) {
+      if (locked[i]) continue;
+      const headroom = caps[i] - allocation[i];
+      if (Number.isFinite(caps[i]) && per >= headroom - FLOW_EPS) {
+        allocation[i] = caps[i];
+        locked[i] = true;
+        unlocked--;
+        remaining -= headroom;
+        newlyLocked = true;
+      }
+    }
+    if (!newlyLocked) {
+      for (let i = 0; i < N; i++) if (!locked[i]) allocation[i] += per;
+      remaining = 0;
+    }
+  }
+
+  for (let i = 0; i < N; i++) edgeRate.set(group[i].id, allocation[i]);
+}
+
 // Demand-driven + source-capped flow:
-//   1a. Each non-hublike target handle splits its demand across incoming
-//       edges (or, for Input/Output boundaries with demand=Infinity,
-//       inherits each source's capacity).
+//   1a. Each non-hublike target handle water-fills its demand across
+//       incoming edges: start with an even split, clip edges whose source
+//       can't supply that share, then redistribute the shortfall to
+//       siblings that still have headroom (or, for Input/Output boundaries
+//       with demand=Infinity, inherit each source's capacity).
 //   1b. Hub-likes are processed in reverse topological order: demand is
 //       pooled across all input edges regardless of handle. edgeInitDemand
 //       snapshots each edge's pre-scaling ask for Phase 3 reporting.
@@ -210,6 +254,15 @@ export function computeFlows(
     return handleRate(node, data, resolver, handleId, side);
   };
 
+  // Hub sources' out capacity isn't known until Phase 1b (reverse topo).
+  // Treat them as unbounded here so the water-fill doesn't prematurely clip
+  // hub-fed edges; Phase 2b will scale hub outputs to their actual supply.
+  const sourceCapForPhase1a = (e: GraphEdge): number => {
+    const src = nodeById.get(e.source);
+    if (src && isHublikeKind(src.data.kind)) return Number.POSITIVE_INFINITY;
+    return handleRate(src, data, resolver, e.sourceHandle, 'out');
+  };
+
   // Phase 1a
   for (const [nodeId, byHandle] of byTarget) {
     const node = nodeById.get(nodeId);
@@ -224,8 +277,7 @@ export function computeFlows(
         }
         continue;
       }
-      const per = group.length ? demand / group.length : 0;
-      for (const e of group) edgeRate.set(e.id, per);
+      distributeDemand(group, demand, sourceCapForPhase1a, edgeRate);
     }
   }
 

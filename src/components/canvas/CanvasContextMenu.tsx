@@ -10,7 +10,7 @@ import {
   Waypoints,
   Wrench,
 } from 'lucide-react';
-import { loadGameData, getRecipesProducing } from '@/data/loader';
+import { loadGameData, getProducibleItems, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
@@ -22,15 +22,8 @@ import type { Blueprint } from '@/models/blueprint';
 
 const gameData = loadGameData();
 
-// Items that at least one non-manual recipe produces. Built once per module load.
-const gameProducibleItems: Item[] = (() => {
-  const out: Item[] = [];
-  for (const item of Object.values(gameData.items)) {
-    const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
-    if (recipes.length > 0) out.push(item);
-  }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
-})();
+// Items that at least one non-manual recipe produces.
+const gameProducibleItems: Item[] = getProducibleItems(gameData);
 
 type Mode = 'recipe' | 'blueprint';
 
@@ -496,7 +489,7 @@ interface ItemRowProps {
   onPick: () => void;
 }
 
-function ItemRowButton({ item, index, active, onHover, onPick }: ItemRowProps) {
+export function ItemRowButton({ item, index, active, onHover, onPick }: ItemRowProps) {
   return (
     <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
       <IconOrLabel iconBasename={item.icon} name={item.name} />
@@ -505,25 +498,39 @@ function ItemRowButton({ item, index, active, onHover, onPick }: ItemRowProps) {
   );
 }
 
-interface RecipeRowProps {
-  row: RecipeRow;
-  index: number;
-  active: boolean;
-  selectedItem: Item | null;
-  onHover: () => void;
-  onPick: () => void;
+interface RecipeRowContentProps {
+  recipe: Recipe;
+  // `itemId` scopes rate + badge computation to a specific item. `side`
+  // selects product-side (producer/target-drag) or ingredient-side
+  // (consumer/source-drag) — product-side is also where the Byproduct badge
+  // can surface.
+  itemId?: string;
+  side?: 'producer' | 'consumer';
+  showIngredientPreview?: boolean;
+  showRate?: boolean;
 }
 
-function RecipeRowButton({ row, index, active, selectedItem, onHover, onPick }: RecipeRowProps) {
-  const { recipe } = row;
+// JSX fragment of a recipe row (machine icon + name + Alt/Byproduct badges +
+// optional ingredient→product preview + rate). Shared by RecipeRowButton
+// here, DragDropMenu's RecipeRow, and AutoFillModal's RecipePicker so the
+// three surfaces render recipes identically.
+export function RecipeRowContent({
+  recipe,
+  itemId,
+  side = 'producer',
+  showIngredientPreview = false,
+  showRate = false,
+}: RecipeRowContentProps) {
   const machine = gameData.machines[recipe.machineId];
-  const product = selectedItem
-    ? recipe.products.find((p) => p.itemId === selectedItem.id)
+  const io = itemId
+    ? side === 'producer'
+      ? recipe.products.find((p) => p.itemId === itemId)
+      : recipe.ingredients.find((i) => i.itemId === itemId)
     : undefined;
-  const isByproduct = product?.isByproduct ?? false;
-  const rate = product ? (product.amount * 60) / recipe.durationSec : 0;
+  const isByproduct = side === 'producer' && !!io && 'isByproduct' in io && io.isByproduct === true;
+  const rate = io ? (io.amount * 60) / recipe.durationSec : 0;
   return (
-    <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
+    <>
       <IconOrLabel iconBasename={machine?.icon} name={machine?.name ?? '?'} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -539,17 +546,44 @@ function RecipeRowButton({ row, index, active, selectedItem, onHover, onPick }: 
             </span>
           )}
         </div>
-        <div className="truncate text-[10px] text-[#6b7388]">
-          {recipe.ingredients
-            .map((ing) => gameData.items[ing.itemId]?.name ?? ing.itemId)
-            .join(' + ') || '—'}
-          {' → '}
-          {recipe.products
-            .map((p) => gameData.items[p.itemId]?.name ?? p.itemId)
-            .join(' + ')}
-        </div>
+        {showIngredientPreview && (
+          <div className="truncate text-[10px] text-[#6b7388]">
+            {recipe.ingredients
+              .map((ing) => gameData.items[ing.itemId]?.name ?? ing.itemId)
+              .join(' + ') || '—'}
+            {' → '}
+            {recipe.products
+              .map((p) => gameData.items[p.itemId]?.name ?? p.itemId)
+              .join(' + ')}
+          </div>
+        )}
       </div>
-      <span className="shrink-0 text-[10px] text-[#6b7388]">{rate.toFixed(1)}/min</span>
+      {showRate && io && (
+        <span className="shrink-0 text-[10px] text-[#6b7388]">{rate.toFixed(1)}/min</span>
+      )}
+    </>
+  );
+}
+
+interface RecipeRowProps {
+  row: RecipeRow;
+  index: number;
+  active: boolean;
+  selectedItem: Item | null;
+  onHover: () => void;
+  onPick: () => void;
+}
+
+function RecipeRowButton({ row, index, active, selectedItem, onHover, onPick }: RecipeRowProps) {
+  return (
+    <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
+      <RecipeRowContent
+        recipe={row.recipe}
+        itemId={selectedItem?.id}
+        side="producer"
+        showIngredientPreview
+        showRate
+      />
     </PickerRow>
   );
 }
