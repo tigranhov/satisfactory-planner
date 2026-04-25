@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { Blueprint } from '../src/models/blueprint';
 import type { ProjectFileV1, ProjectIndexV1 } from '../src/models/project';
+import type { PersistedUiShape } from '../src/store/uiStore';
 import type { UpdaterStatus } from './updater';
 
 const api = {
@@ -19,6 +20,11 @@ const api = {
     ipcRenderer.invoke('blueprints:load') as Promise<Blueprint[]>,
   saveBlueprints: (blueprints: Blueprint[]) =>
     ipcRenderer.invoke('blueprints:save', blueprints) as Promise<void>,
+
+  loadUiState: () =>
+    ipcRenderer.invoke('uiState:load') as Promise<PersistedUiShape | null>,
+  saveUiState: (state: PersistedUiShape) =>
+    ipcRenderer.invoke('uiState:save', state) as Promise<void>,
 
   getUpdaterStatus: () =>
     ipcRenderer.invoke('updater:getStatus') as Promise<UpdaterStatus>,

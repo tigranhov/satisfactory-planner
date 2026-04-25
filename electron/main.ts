@@ -5,6 +5,21 @@ import { setupAutoUpdater } from './updater';
 
 const isDev = !app.isPackaged;
 
+// Refuse a second concurrent instance — two Electron processes fighting over
+// the same userData directory cause silent localStorage / cache write
+// failures. Focus the existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  console.error('[main] Another Satisfactory Planner instance is already running.');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const [win] = BrowserWindow.getAllWindows();
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -44,6 +59,10 @@ app.on('window-all-closed', () => {
 
 function blueprintsFilePath() {
   return join(app.getPath('userData'), 'blueprints.json');
+}
+
+function uiStateFilePath() {
+  return join(app.getPath('userData'), 'ui-state.json');
 }
 
 function projectsDir() {
@@ -133,5 +152,24 @@ function registerIpcHandlers() {
     await fs.mkdir(app.getPath('userData'), { recursive: true });
     const payload = JSON.stringify({ version: 1, blueprints }, null, 2);
     await fs.writeFile(file, payload, 'utf8');
+  });
+
+  ipcMain.handle('uiState:load', async () => {
+    const file = uiStateFilePath();
+    try {
+      const raw = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+      return null;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      console.error('[uiState:load]', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('uiState:save', async (_event, state: unknown) => {
+    await fs.mkdir(app.getPath('userData'), { recursive: true });
+    await fs.writeFile(uiStateFilePath(), JSON.stringify(state, null, 2), 'utf8');
   });
 }

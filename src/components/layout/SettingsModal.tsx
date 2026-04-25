@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { Settings, X } from 'lucide-react';
+import { Position } from '@xyflow/react';
 import {
   useUiStore,
   type ClockStrategy,
+  type EdgeStyle,
   type GridSize,
   type GroupingStrategy,
 } from '@/store/uiStore';
+import { buildEdgePath } from '@/lib/edgeStyle';
 
 interface Props {
   open: boolean;
@@ -66,6 +69,19 @@ const GRID_SIZES: GridSizeOption[] = [
   { value: 40, label: '40 px', description: 'Coarse — keeps wide nodes on rails.' },
 ];
 
+interface EdgeStyleOption {
+  value: EdgeStyle;
+  label: string;
+  description: string;
+}
+
+const EDGE_STYLE_OPTIONS: EdgeStyleOption[] = [
+  { value: 'bezier', label: 'Bezier', description: 'Smooth curves. The default.' },
+  { value: 'straight', label: 'Straight', description: 'Direct lines from source to target.' },
+  { value: 'step', label: 'Step', description: 'Orthogonal corners, no rounding.' },
+  { value: 'smoothstep', label: 'Smoothstep', description: 'Orthogonal corners, rounded.' },
+];
+
 export default function SettingsModal({ open, onClose }: Props) {
   const clockStrategy = useUiStore((s) => s.clockStrategy);
   const setClockStrategy = useUiStore((s) => s.setClockStrategy);
@@ -75,6 +91,8 @@ export default function SettingsModal({ open, onClose }: Props) {
   const setSnapToGrid = useUiStore((s) => s.setSnapToGrid);
   const gridSize = useUiStore((s) => s.gridSize);
   const setGridSize = useUiStore((s) => s.setGridSize);
+  const edgeStyle = useUiStore((s) => s.edgeStyle);
+  const setEdgeStyle = useUiStore((s) => s.setEdgeStyle);
 
   useEffect(() => {
     if (!open) return;
@@ -140,6 +158,33 @@ export default function SettingsModal({ open, onClose }: Props) {
           </SettingSection>
 
           <SettingSection
+            heading="Edge style"
+            blurb="The line shape used for connections between nodes. Rate / satisfaction colors are unaffected."
+          >
+            {EDGE_STYLE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setEdgeStyle(opt.value)}
+                className={`flex items-center gap-3 rounded border px-3 py-2 text-left transition-colors ${
+                  edgeStyle === opt.value
+                    ? 'border-accent bg-accent/10'
+                    : 'border-border bg-panel-hi hover:border-accent/50'
+                }`}
+              >
+                <EdgeStylePreview style={opt.value} />
+                <div className="flex flex-col gap-0.5">
+                  <span
+                    className={`text-sm font-medium ${edgeStyle === opt.value ? 'text-accent' : ''}`}
+                  >
+                    {opt.label}
+                  </span>
+                  <span className="text-[11px] text-[#9aa2b8]">{opt.description}</span>
+                </div>
+              </button>
+            ))}
+          </SettingSection>
+
+          <SettingSection
             heading="Grid"
             blurb="Snap node positions to a fixed grid step when dragging or creating. Off by default."
           >
@@ -201,6 +246,29 @@ interface StrategyButtonProps {
   label: string;
   description: string;
   onClick: () => void;
+}
+
+function EdgeStylePreview({ style }: { style: EdgeStyle }) {
+  const [path] = buildEdgePath(style, {
+    sourceX: 4,
+    sourceY: 6,
+    targetX: 60,
+    targetY: 22,
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  });
+  return (
+    <svg
+      viewBox="0 0 64 28"
+      className="h-7 w-16 shrink-0 text-[#9aa2b8]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden
+    >
+      <path d={path} />
+    </svg>
+  );
 }
 
 function StrategyButton({ active, label, description, onClick }: StrategyButtonProps) {

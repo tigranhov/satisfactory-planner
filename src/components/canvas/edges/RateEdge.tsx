@@ -1,5 +1,7 @@
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
 import { FLOW_EPS, type RateEdgeData } from '@/models/flow';
+import { useUiStore } from '@/store/uiStore';
+import { buildEdgePath } from '@/lib/edgeStyle';
 
 type EdgeState = 'idle' | 'short' | 'exact' | 'surplus';
 
@@ -29,7 +31,8 @@ export default function RateEdge({
   data,
   markerEnd,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const edgeStyle = useUiStore((s) => s.edgeStyle);
+  const [edgePath, labelX, labelY] = buildEdgePath(edgeStyle, {
     sourceX,
     sourceY,
     sourcePosition,
