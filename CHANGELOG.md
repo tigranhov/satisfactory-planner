@@ -6,6 +6,39 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-04-26
+
+### Added
+- **Browser-style back / forward navigation.** Mouse thumb buttons (4 / 5)
+  and Alt+Left / Alt+Right walk a back/forward history through factory
+  drilling — drilling out and back in no longer loses your trail.
+  Suppressed while editing text or while a modal is open.
+- **Target node.** A new node kind: plug it into any production line,
+  set a count (e.g. 5000 Modular Engines), and see the time required to
+  reach that count given the current inflow rate. Available from the
+  canvas right-click menu and the drag-from-handle picker.
+- **Grid-snapped node movement.** Toggleable from Settings (off by
+  default; pick 10 / 20 / 40 px). When on, dragging snaps to the grid;
+  pasting and auto-fill snap the anchor only so carefully laid layouts
+  stay intact.
+- **New nodes spawn centered on the cursor.** Right-click → Add Node
+  drops the node centered on the click point instead of with its
+  top-left there. Same for drag-from-handle placements.
+- **Edge style selection.** Pick between Bezier (default), Straight,
+  Step, and Smoothstep from Settings. Each option shows a tiny live
+  preview rendered with the same code that draws edges on the canvas.
+
+### Fixed
+- **UI settings reset between launches.** Settings (snap, grid size,
+  edge style, panel state, etc.) used to live in `localStorage`, which
+  silently failed when Chromium couldn't lock its userData directory
+  (stale Electron process, double-launched dev session, antivirus).
+  Migrated to the same IPC + filesystem path projects and blueprints
+  use; settings now persist in `userData/ui-state.json`. A one-time
+  migration carries existing localStorage values forward. A
+  single-instance lock prevents accidentally launching a second
+  Electron process that would have caused the same issue.
+
 ## [0.8.0] - 2026-04-25
 
 ### Added
@@ -153,7 +186,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.5.0...v0.6.0
