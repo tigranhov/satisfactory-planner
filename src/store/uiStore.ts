@@ -12,12 +12,16 @@ export type GroupingStrategy = 'combined' | 'split';
 
 interface PersistedShape {
   taskPanelOpenByProject: Record<ProjectId, boolean>;
+  infoPanelOpenByProject: Record<ProjectId, boolean>;
+  infoSectionsOpen: Record<string, boolean>;
   clockStrategy: ClockStrategy;
   groupingStrategy: GroupingStrategy;
 }
 
 const DEFAULT_PERSISTED: PersistedShape = {
   taskPanelOpenByProject: {},
+  infoPanelOpenByProject: {},
+  infoSectionsOpen: {},
   clockStrategy: 'partial-last',
   groupingStrategy: 'combined',
 };
@@ -30,6 +34,8 @@ function loadPersisted(): PersistedShape {
     const parsed = JSON.parse(raw) as Partial<PersistedShape>;
     return {
       taskPanelOpenByProject: parsed.taskPanelOpenByProject ?? {},
+      infoPanelOpenByProject: parsed.infoPanelOpenByProject ?? {},
+      infoSectionsOpen: parsed.infoSectionsOpen ?? {},
       clockStrategy: parsed.clockStrategy ?? DEFAULT_PERSISTED.clockStrategy,
       groupingStrategy: parsed.groupingStrategy ?? DEFAULT_PERSISTED.groupingStrategy,
     };
@@ -42,6 +48,8 @@ function savePersisted(state: PersistedShape, patch: Partial<PersistedShape> = {
   if (typeof localStorage === 'undefined') return;
   const next: PersistedShape = {
     taskPanelOpenByProject: state.taskPanelOpenByProject,
+    infoPanelOpenByProject: state.infoPanelOpenByProject,
+    infoSectionsOpen: state.infoSectionsOpen,
     clockStrategy: state.clockStrategy,
     groupingStrategy: state.groupingStrategy,
     ...patch,
@@ -55,11 +63,15 @@ function savePersisted(state: PersistedShape, patch: Partial<PersistedShape> = {
 
 interface UiState {
   taskPanelOpenByProject: Record<ProjectId, boolean>;
+  infoPanelOpenByProject: Record<ProjectId, boolean>;
+  infoSectionsOpen: Record<string, boolean>;
   clockStrategy: ClockStrategy;
   groupingStrategy: GroupingStrategy;
   pendingFocusNodeId: NodeId | null;
 
   setTaskPanelOpen: (projectId: ProjectId, open: boolean) => void;
+  setInfoPanelOpen: (projectId: ProjectId, open: boolean) => void;
+  setInfoSectionOpen: (sectionId: string, open: boolean) => void;
   setClockStrategy: (strategy: ClockStrategy) => void;
   setGroupingStrategy: (strategy: GroupingStrategy) => void;
   clearPendingFocus: () => void;
@@ -76,6 +88,22 @@ export const useUiStore = create<UiState>((set) => ({
       const next = { ...s.taskPanelOpenByProject, [projectId]: open };
       savePersisted(s, { taskPanelOpenByProject: next });
       return { taskPanelOpenByProject: next };
+    }),
+
+  setInfoPanelOpen: (projectId, open) =>
+    set((s) => {
+      if (s.infoPanelOpenByProject[projectId] === open) return s;
+      const next = { ...s.infoPanelOpenByProject, [projectId]: open };
+      savePersisted(s, { infoPanelOpenByProject: next });
+      return { infoPanelOpenByProject: next };
+    }),
+
+  setInfoSectionOpen: (sectionId, open) =>
+    set((s) => {
+      if (s.infoSectionsOpen[sectionId] === open) return s;
+      const next = { ...s.infoSectionsOpen, [sectionId]: open };
+      savePersisted(s, { infoSectionsOpen: next });
+      return { infoSectionsOpen: next };
     }),
 
   setClockStrategy: (strategy) =>

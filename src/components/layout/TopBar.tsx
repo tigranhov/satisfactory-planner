@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   Folder,
+  Gauge,
   ListTodo,
   Pencil,
   Plus,
@@ -45,6 +46,10 @@ export default function TopBar() {
     activeProjectId ? !!s.taskPanelOpenByProject[activeProjectId] : false,
   );
   const setTaskPanelOpen = useUiStore((s) => s.setTaskPanelOpen);
+  const infoPanelOpen = useUiStore((s) =>
+    activeProjectId ? !!s.infoPanelOpenByProject[activeProjectId] : false,
+  );
+  const setInfoPanelOpen = useUiStore((s) => s.setInfoPanelOpen);
 
   const handleAddFactory = () => {
     const factoryGraphId = newGraphId();
@@ -91,6 +96,17 @@ export default function TopBar() {
         >
           <ListTodo className="h-4 w-4" />
           Tasks
+        </button>
+        <button
+          onClick={() => activeProjectId && setInfoPanelOpen(activeProjectId, !infoPanelOpen)}
+          disabled={!activeProjectId}
+          className={`flex items-center gap-1 rounded px-3 py-1 text-sm disabled:opacity-50 ${
+            infoPanelOpen ? 'bg-accent/20 text-accent' : 'bg-panel-hi hover:bg-border'
+          }`}
+          title="Toggle factory info panel"
+        >
+          <Gauge className="h-4 w-4" />
+          Info
         </button>
         <button
           onClick={() => setBookOpen(true)}

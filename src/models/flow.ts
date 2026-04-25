@@ -160,6 +160,12 @@ function topoSortHubs(
 
 const NO_RESOLVER: SubgraphResolver = () => undefined;
 
+// Same identity-based caching as `graphRateCache` below: stores cleanly
+// emit fresh Graph references on each edit, so WeakMap entries invalidate
+// for free when a graph mutates. Lets `computeFlows` callers (subgraphIO,
+// subgraphIssues, graphInterfaceRates) share one computation per graph.
+const flowResultCache = new WeakMap<Graph, FlowResult>();
+
 // Water-fill demand across `group` edges so sources with spare capacity
 // absorb the shortfall of sibling sources that would otherwise be clipped.
 // An even split would leave the slack on the floor — parallel producers with
@@ -222,9 +228,15 @@ export function computeFlows(
   data: GameData,
   resolver: SubgraphResolver = NO_RESOLVER,
 ): FlowResult {
+  const cached = flowResultCache.get(graph);
+  if (cached) return cached;
   const edges = new Map<string, EdgeFlow>();
   const targetHandles = new Map<string, Map<string, HandleFlow>>();
-  if (graph.edges.length === 0) return { edges, targetHandles };
+  if (graph.edges.length === 0) {
+    const empty: FlowResult = { edges, targetHandles };
+    flowResultCache.set(graph, empty);
+    return empty;
+  }
 
   const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
   const byTarget = groupEdges(graph.edges, 'target');
@@ -372,7 +384,9 @@ export function computeFlows(
     }
   }
 
-  return { edges, targetHandles };
+  const result: FlowResult = { edges, targetHandles };
+  flowResultCache.set(graph, result);
+  return result;
 }
 
 export interface GraphInterfaceRates {

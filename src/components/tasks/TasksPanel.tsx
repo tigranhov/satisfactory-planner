@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import {
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Factory,
+  Hammer,
   Layers,
   LogIn,
   LogOut,
@@ -19,8 +22,17 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUiStore } from '@/store/uiStore';
 import { loadGameData } from '@/data/loader';
 import InlineItemText from '@/components/ui/InlineItemText';
+import IconOrLabel from '@/components/ui/IconOrLabel';
 import { ROOT_GRAPH_ID } from '@/lib/ids';
+import {
+  buildCostForNode,
+  plannedBuildCost,
+  sortItemsByValue,
+  type PlannedBuildCost,
+} from '@/lib/aggregate';
+import { formatNumber } from '@/lib/format';
 import type { GraphId, GraphNode, NodeData } from '@/models/graph';
+import type { RecipeIO } from '@/data/types';
 
 const gameData = loadGameData();
 
@@ -63,8 +75,12 @@ export default function TasksPanel() {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setTaskPanelOpen = useUiStore((s) => s.setTaskPanelOpen);
   const navigateToNode = useUiStore((s) => s.navigateToNode);
+  const costOpen = useUiStore((s) => s.infoSectionsOpen['tasks-cost'] ?? false);
+  const setInfoSectionOpen = useUiStore((s) => s.setInfoSectionOpen);
 
   const blueprintName = (id: string) => blueprints[id]?.name;
+
+  const costData = useMemo(() => plannedBuildCost(graphs, gameData), [graphs]);
 
   const markBuilt = (graphId: GraphId, node: GraphNode) => {
     updateNode(graphId, node.id, { data: { ...node.data, status: 'built' } });
@@ -132,6 +148,12 @@ export default function TasksPanel() {
         )}
       </div>
 
+      <CostSummary
+        cost={costData}
+        open={costOpen}
+        onToggle={() => setInfoSectionOpen('tasks-cost', !costOpen)}
+      />
+
       <div className="flex-1 overflow-y-auto">
         {sections.length === 0 && totalTagged > 0 && (
           <div className="px-3 py-4 text-xs text-[#6b7388]">
@@ -146,6 +168,7 @@ export default function TasksPanel() {
             {section.nodes.map((node) => {
               const { icon: Icon, label } = describeNode(node.data, blueprintName);
               const note = node.data.taskNote;
+              const cost = buildCostForNode(node, gameData);
               return (
                 <div
                   key={node.id}
@@ -168,6 +191,7 @@ export default function TasksPanel() {
                         {note}
                       </div>
                     )}
+                    {cost && cost.length > 0 && <TaskCostLine cost={cost} />}
                   </button>
                   <button
                     onClick={(e) => {
@@ -185,6 +209,80 @@ export default function TasksPanel() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CostSummary({
+  cost,
+  open,
+  onToggle,
+}: {
+  cost: PlannedBuildCost;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const items = useMemo(() => sortItemsByValue(cost.summary, gameData), [cost]);
+  if (items.length === 0) return null;
+  const ChevIcon = open ? ChevronDown : ChevronRight;
+  return (
+    <div className="border-b border-border">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-2 bg-panel-hi/40 px-3 py-1.5 text-left text-[11px] text-[#9aa2b8] hover:bg-panel-hi"
+        title="Toggle planned build cost"
+      >
+        <span className="flex items-center gap-1.5">
+          <Hammer className="h-3 w-3 text-accent" />
+          <span className="font-medium uppercase tracking-wider text-[10px]">
+            Build cost
+          </span>
+          <span className="text-[#6b7388]">({items.length} resources)</span>
+        </span>
+        <ChevIcon className="h-3.5 w-3.5 text-[#6b7388]" />
+      </button>
+      {open && (
+        <div className="px-3 py-1.5">
+          {items.map((row) => (
+            <div
+              key={row.itemId}
+              className="flex items-center justify-between gap-2 py-0.5 text-xs"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <IconOrLabel
+                  iconBasename={row.icon}
+                  name={row.name}
+                  className="inline-block h-4 w-4 rounded"
+                />
+                <span className="truncate text-[#e6e8ee]">{row.name}</span>
+              </div>
+              <span className="shrink-0 font-medium tabular-nums text-[#e6e8ee]">
+                {formatNumber(row.value, 1)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskCostLine({ cost }: { cost: RecipeIO[] }) {
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-[#6b7388]">
+      {cost.map((io, idx) => {
+        const item = gameData.items[io.itemId];
+        return (
+          <span key={`${io.itemId}-${idx}`} className="inline-flex items-center gap-1">
+            <IconOrLabel
+              iconBasename={item?.icon}
+              name={item?.name ?? io.itemId}
+              className="inline-block h-3 w-3 rounded"
+            />
+            <span className="tabular-nums">{formatNumber(io.amount, 1)}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
