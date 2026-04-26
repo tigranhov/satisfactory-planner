@@ -21,6 +21,7 @@ export function estimateNodeWidth(kind: NodeKind | undefined): number {
   if (kind === 'input' || kind === 'output') return 180;
   if (kind === 'hub' || kind === 'splitter' || kind === 'merger') return 200;
   if (kind === 'target') return 220;
+  if (kind === 'sink') return 220;
   return 260;
 }
 

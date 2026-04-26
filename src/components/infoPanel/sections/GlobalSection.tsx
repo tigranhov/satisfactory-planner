@@ -8,6 +8,7 @@ interface Props {
   rawInputs: Map<ItemId, number>;
   finalOutputs: Map<ItemId, number>;
   surplus: Map<ItemId, number>;
+  sinkPointsPerMin: number;
   gameData: GameData;
 }
 
@@ -45,12 +46,23 @@ function CollapsibleItemList({
   );
 }
 
-export default function GlobalSection({ rawInputs, finalOutputs, surplus, gameData }: Props) {
+export default function GlobalSection({
+  rawInputs,
+  finalOutputs,
+  surplus,
+  sinkPointsPerMin,
+  gameData,
+}: Props) {
   const inputs = sortItemsByValue(rawInputs, gameData);
   const outputs = sortItemsByValue(finalOutputs, gameData);
   const over = sortItemsByValue(surplus, gameData);
 
-  if (inputs.length === 0 && outputs.length === 0 && over.length === 0) {
+  if (
+    inputs.length === 0 &&
+    outputs.length === 0 &&
+    over.length === 0 &&
+    sinkPointsPerMin <= 0
+  ) {
     return (
       <div className="px-3 py-4 text-xs text-[#6b7388]">
         Add factories with extractors and recipes to see project-wide flow.
@@ -60,6 +72,14 @@ export default function GlobalSection({ rawInputs, finalOutputs, surplus, gameDa
 
   return (
     <>
+      {sinkPointsPerMin > 0 && (
+        <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs">
+          <span className="text-[#9aa2b8]">Sink points / min</span>
+          <span className="font-medium tabular-nums text-cyan-400">
+            {Math.round(sinkPointsPerMin).toLocaleString()}
+          </span>
+        </div>
+      )}
       <CollapsibleItemList
         id="global-inputs"
         title="Raw world inputs"

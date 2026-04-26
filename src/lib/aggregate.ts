@@ -1,6 +1,6 @@
 import type { GameData, ItemId, MachineId, RecipeId, RecipeIO } from '@/data/types';
-import type { Graph, GraphId, GraphNode, NodeId, RecipeNodeData } from '@/models/graph';
-import { computeFlows, graphInterfaceRates, type SubgraphResolver } from '@/models/flow';
+import type { Graph, GraphId, GraphNode, NodeId, RecipeNodeData, SinkNodeData } from '@/models/graph';
+import { computeFlows, graphInterfaceRates, type EdgeFlow, type SubgraphResolver } from '@/models/flow';
 import {
   nodePowerMW,
   lookupRecipeForNode,
@@ -154,6 +154,61 @@ export function subgraphPower(
   };
 }
 
+// Visit every sink node reachable from `graph`, recursing into factory and
+// blueprint instances the same way `walkRecipeNodes` does so a 3× blueprint
+// counts its internal sinks three times. The visitor receives the graph the
+// node lives in (`parent`) so callers can read incident-edge rates from
+// `computeFlows(parent, ...)` without re-walking.
+export function walkSinkNodes(
+  graph: Graph | undefined,
+  resolver: SubgraphResolver,
+  visit: (parent: Graph, node: GraphNode, multiplier: number) => void,
+  multiplier = 1,
+  path: Set<string> = new Set(),
+): void {
+  if (!graph || path.has(graph.id)) return;
+  path.add(graph.id);
+  for (const node of graph.nodes) {
+    if (node.data.kind === 'sink') {
+      visit(graph, node, multiplier);
+    } else if (node.data.kind === 'factory') {
+      const sub = resolver(node.data.factoryGraphId);
+      if (sub) walkSinkNodes(sub, resolver, visit, multiplier, path);
+    } else if (node.data.kind === 'blueprint') {
+      const sub = resolver(node.data.blueprintId);
+      const count = Math.max(0, node.data.count ?? 1);
+      if (sub && count > 0) walkSinkNodes(sub, resolver, visit, multiplier * count, path);
+    }
+  }
+  path.delete(graph.id);
+}
+
+// Project-level AWESOME Sink points / minute: for every sink node anywhere in
+// the project, sum (inflow rate × Item.sinkPoints), with blueprint count as a
+// multiplier. A sink with an item lacking sinkPoints contributes 0.
+export function globalSinkPoints(
+  graph: Graph | undefined,
+  gameData: GameData,
+  resolver: SubgraphResolver,
+): number {
+  if (!graph) return 0;
+  let total = 0;
+  walkSinkNodes(graph, resolver, (parent, node, mult) => {
+    const data = node.data as SinkNodeData;
+    if (!data.sinkItemId) return;
+    const points = gameData.items[data.sinkItemId]?.sinkPoints ?? 0;
+    if (points <= 0) return;
+    const flow = computeFlows(parent, gameData, resolver);
+    let rate = 0;
+    for (const e of parent.edges) {
+      if (e.target !== node.id) continue;
+      rate += flow.edges.get(e.id)?.rate ?? 0;
+    }
+    total += rate * points * mult;
+  });
+  return total;
+}
+
 // Items extracted from the world: outputs of any recipe with isExtraction set
 // (miners, oil extractors, water extractors, etc.), recursed across the project.
 export function globalRawInputs(
@@ -201,6 +256,12 @@ function immediateFlow(
 ): { produced: Map<ItemId, number>; consumed: Map<ItemId, number> } {
   const produced = new Map<ItemId, number>();
   const consumed = new Map<ItemId, number>();
+  // Lazy — only graphs with a sink node pay the (memoized) computeFlows call.
+  let edgeRates: Map<string, EdgeFlow> | null = null;
+  const sinkInflow = (edgeId: string): number => {
+    if (!edgeRates) edgeRates = computeFlows(graph, gameData, resolver).edges;
+    return edgeRates.get(edgeId)?.rate ?? 0;
+  };
   for (const node of graph.nodes) {
     if (node.data.kind === 'recipe') {
       const data = node.data as RecipeNodeData;
@@ -232,6 +293,16 @@ function immediateFlow(
       }
       for (const [itemId, rate] of inner.imports) {
         consumed.set(itemId, (consumed.get(itemId) ?? 0) + rate * count);
+      }
+    } else if (node.data.kind === 'sink') {
+      // A sink consumes whatever its incoming edges actually deliver. Without
+      // this branch a closed-loop byproduct routed into a sink would still
+      // surface as project-level surplus.
+      for (const e of graph.edges) {
+        if (e.target !== node.id || !e.itemId) continue;
+        const rate = sinkInflow(e.id);
+        if (rate <= 1e-6) continue;
+        consumed.set(e.itemId, (consumed.get(e.itemId) ?? 0) + rate);
       }
     }
   }

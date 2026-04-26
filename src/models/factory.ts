@@ -59,6 +59,7 @@ const HANDLE_PREFIX = {
   mergerIn: 'merge-in',
   mergerOut: 'merge-out',
   targetIn: 'target-in',
+  sinkIn: 'sink-in',
 } as const;
 
 const SOURCE_HANDLE_PREFIXES: readonly string[] = [
@@ -82,6 +83,15 @@ export function handleIdForInterface(kind: 'input' | 'output', itemId?: string) 
 
 export function handleIdForTarget(itemId?: string) {
   return itemId ? `${HANDLE_PREFIX.targetIn}:${itemId}` : HANDLE_PREFIX.targetIn;
+}
+
+// Sink uses a stable item-agnostic handle id. Unlike Target, there's no
+// per-item suffix: the bare prefix avoids a render race where the Handle id
+// changes from `sink-in` to `sink-in:<itemId>` between updateNode and addEdge,
+// which React Flow logs as a "Couldn't create edge for target handle" warning.
+// The committed item lives on node.data.sinkItemId and on the edge's itemId.
+export function handleIdForSink() {
+  return HANDLE_PREFIX.sinkIn;
 }
 
 export const HUB_IN_HANDLE = HANDLE_PREFIX.hubIn;
@@ -135,6 +145,9 @@ export function itemIdForHandle(
   }
   if (node.data.kind === 'target') {
     return node.data.targetItemId ?? '';
+  }
+  if (node.data.kind === 'sink') {
+    return node.data.sinkItemId ?? '';
   }
   return side === 'source'
     ? itemIdFromSourceHandle(handleId ?? '')

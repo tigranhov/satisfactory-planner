@@ -24,6 +24,7 @@ import HubNode from './nodes/HubNode';
 import SplitterNode from './nodes/SplitterNode';
 import MergerNode from './nodes/MergerNode';
 import TargetNode from './nodes/TargetNode';
+import SinkNode from './nodes/SinkNode';
 import RateEdge from './edges/RateEdge';
 import CanvasContextMenu from './CanvasContextMenu';
 import NodeContextMenu from './NodeContextMenu';
@@ -50,6 +51,7 @@ import {
   handleIdForInterface,
   handleIdForProduct,
   handleIdForTarget,
+  handleIdForSink,
   handleIdForSubgraphInput,
   handleIdForSubgraphOutput,
   isHublikeKind,
@@ -108,6 +110,7 @@ const nodeTypes = {
   splitter: SplitterNode,
   merger: MergerNode,
   target: TargetNode,
+  sink: SinkNode,
 };
 
 type ReactFlowNodeType = keyof typeof nodeTypes;
@@ -342,6 +345,12 @@ export default function GraphCanvas() {
         });
         targetHandle = handleIdForTarget(itemId);
       }
+      if (targetNode.data.kind === 'sink' && !targetNode.data.sinkItemId) {
+        store.getState().updateNode(activeGraphId, targetNode.id, {
+          data: { ...targetNode.data, sinkItemId: itemId },
+        });
+        targetHandle = handleIdForSink();
+      }
 
       store.getState().addEdge(activeGraphId, {
         source: connection.source,
@@ -487,6 +496,15 @@ export default function GraphCanvas() {
     [activeGraphId, store, gridSize, snapToGrid],
   );
 
+  const onAddSink = useCallback(
+    (cursor: { x: number; y: number }) => {
+      const position = centerOnCursor(cursor, 'sink', gridSize, snapToGrid);
+      store.getState().addNode(activeGraphId, position, { kind: 'sink' });
+      setMenu(null);
+    },
+    [activeGraphId, store, gridSize, snapToGrid],
+  );
+
   // Place a new node at the drop position and wire it to the dragged handle
   // via the shared commitAndAddEdge path. For interface / hub-likes that
   // land without a committed item, the unset handle form is used —
@@ -580,6 +598,10 @@ export default function GraphCanvas() {
         // otherwise commitAndAddEdge will set it on first connection.
         data = { kind: 'target', targetCount: 1000, targetItemId: choiceItemId };
         newHandle = handleIdForTarget(choiceItemId);
+      } else if (choice.kind === 'sink') {
+        // Same single-input shape as Target — source-drag only.
+        data = { kind: 'sink', sinkItemId: choiceItemId };
+        newHandle = handleIdForSink();
       } else {
         data = { kind: choice.which };
         newHandle = handleIdForInterface(choice.which);
@@ -992,6 +1014,7 @@ export default function GraphCanvas() {
           onAddInterface={onAddInterface}
           onAddHublike={onAddHublike}
           onAddTarget={onAddTarget}
+          onAddSink={onAddSink}
         />
       )}
       {nodeMenu && (

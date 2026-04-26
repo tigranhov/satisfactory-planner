@@ -9,6 +9,7 @@ import { ROOT_GRAPH_ID } from '@/lib/ids';
 import {
   globalFinalOutputs,
   globalRawInputs,
+  globalSinkPoints,
   globalSurplus,
   somersloopUsage,
   subgraphIO,
@@ -73,6 +74,10 @@ export default function InfoPanel() {
     () => (isGlobal ? globalSurplus(graph, gameData, resolver) : null),
     [graph, resolver, isGlobal],
   );
+  const sinkPointsPerMin = useMemo(
+    () => (isGlobal ? globalSinkPoints(graph, gameData, resolver) : 0),
+    [graph, resolver, isGlobal],
+  );
 
   const machineTotal = machines ? totalMachineCount(machines) : 0;
   const issueCount = issues?.length ?? 0;
@@ -132,6 +137,7 @@ export default function InfoPanel() {
               rawInputs={rawInputs}
               finalOutputs={finalOutputs}
               surplus={projectSurplus}
+              sinkPointsPerMin={sinkPointsPerMin}
               gameData={gameData}
             />
           )

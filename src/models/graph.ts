@@ -13,7 +13,8 @@ export type NodeKind =
   | 'hub'
   | 'splitter'
   | 'merger'
-  | 'target';
+  | 'target'
+  | 'sink';
 
 // Task tracking: `planned` = user intends to build, `built` = built in-game.
 // Absent on every node by default; existing saves load with `undefined`.
@@ -85,6 +86,13 @@ export interface TargetNodeData extends BaseNodeData {
   targetCount: number;
 }
 
+// Unlike Target, sink inflow IS counted as consumption at the immediate
+// level so closed-loop byproducts net out of project surplus.
+export interface SinkNodeData extends BaseNodeData {
+  kind: 'sink';
+  sinkItemId?: ItemId;
+}
+
 export type NodeData =
   | RecipeNodeData
   | FactoryNodeData
@@ -93,7 +101,8 @@ export type NodeData =
   | HubNodeData
   | SplitterNodeData
   | MergerNodeData
-  | TargetNodeData;
+  | TargetNodeData
+  | SinkNodeData;
 
 export interface GraphNode {
   id: NodeId;

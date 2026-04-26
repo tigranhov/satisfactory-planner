@@ -13,6 +13,7 @@ import {
   Package,
   Split,
   Target,
+  Trash2,
   Waypoints,
   X,
   type LucideIcon,
@@ -73,6 +74,15 @@ function describeNode(data: NodeData, blueprintName: (id: string) => string | un
       return {
         icon: Target,
         label: itemName ? `Target: ${itemName}` : 'Target',
+      };
+    }
+    case 'sink': {
+      const itemName = data.sinkItemId
+        ? gameData.items[data.sinkItemId]?.name ?? data.sinkItemId
+        : null;
+      return {
+        icon: Trash2,
+        label: itemName ? `Sink: ${itemName}` : 'Sink',
       };
     }
   }

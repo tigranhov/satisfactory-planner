@@ -2,8 +2,42 @@ import { useGraphStore } from '@/store/graphStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { ROOT_GRAPH_ID } from '@/lib/ids';
+import { handleIdForSink } from '@/models/factory';
 import type { Graph, GraphId } from '@/models/graph';
 import type { ProjectId, ProjectIndexV1, ProjectSummary } from '@/models/project';
+
+// Sink handle ids briefly shipped with an item suffix (`sink-in:<itemId>`),
+// which races React Flow's reconciliation when the item commits on first
+// connection. The shipped form is the bare prefix; strip any stale suffix on
+// load so projects from the buggy build don't keep firing
+// "Couldn't create edge for target handle id" warnings.
+function normalizeSinkHandleIds(graphs: Record<GraphId, Graph>): Record<GraphId, Graph> {
+  const sinkHandle = handleIdForSink();
+  let touched = false;
+  const out: Record<GraphId, Graph> = {};
+  for (const [id, g] of Object.entries(graphs)) {
+    const sinkIds = new Set<string>();
+    for (const n of g.nodes) if (n.data.kind === 'sink') sinkIds.add(n.id);
+    if (sinkIds.size === 0) {
+      out[id] = g;
+      continue;
+    }
+    let edgesChanged = false;
+    const nextEdges = g.edges.map((e) => {
+      if (!sinkIds.has(e.target)) return e;
+      if (e.targetHandle === sinkHandle) return e;
+      edgesChanged = true;
+      return { ...e, targetHandle: sinkHandle };
+    });
+    if (edgesChanged) {
+      touched = true;
+      out[id] = { ...g, edges: nextEdges };
+    } else {
+      out[id] = g;
+    }
+  }
+  return touched ? out : graphs;
+}
 
 const DEBOUNCE_MS = 300;
 
@@ -86,7 +120,7 @@ export async function loadProjectBootstrap(): Promise<void> {
   if (activeId) {
     const file = await api.loadProject(activeId);
     if (file?.project.graphs) {
-      useGraphStore.getState().replaceGraphs(file.project.graphs);
+      useGraphStore.getState().replaceGraphs(normalizeSinkHandleIds(file.project.graphs));
       useNavigationStore.getState().reset();
     }
   }
@@ -169,7 +203,7 @@ export async function switchProjectPersistent(id: ProjectId): Promise<void> {
     api?.isElectron
       ? (await api.loadProject(id))?.project.graphs ?? { [ROOT_GRAPH_ID]: emptyRoot() }
       : { [ROOT_GRAPH_ID]: emptyRoot() };
-  useGraphStore.getState().replaceGraphs(nextGraphs);
+  useGraphStore.getState().replaceGraphs(normalizeSinkHandleIds(nextGraphs));
   useNavigationStore.getState().reset();
   primeAutosaveSnapshot();
   await writeIndex();

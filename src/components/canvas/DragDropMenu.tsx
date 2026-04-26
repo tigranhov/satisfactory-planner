@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Merge, Search, Split, Target, Waypoints } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Merge, Search, Split, Target, Trash2, Waypoints } from 'lucide-react';
 import {
   getConsumableItems,
   getProducibleItems,
@@ -33,7 +33,8 @@ export type DragDropChoice =
   | { kind: 'blueprint'; blueprintId: string; resolvedItemId?: string }
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'interface'; which: InterfaceKind }
-  | { kind: 'target'; resolvedItemId?: string };
+  | { kind: 'target'; resolvedItemId?: string }
+  | { kind: 'sink'; resolvedItemId?: string };
 
 interface Props {
   screenPosition: { x: number; y: number };
@@ -56,7 +57,8 @@ type Candidate =
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'recipe'; recipe: Recipe }
   | { kind: 'blueprint'; bp: Blueprint }
-  | { kind: 'target' };
+  | { kind: 'target' }
+  | { kind: 'sink' };
 
 // Items to surface per drag direction: consumers for source-drags (we want
 // something that uses the item), producers for target-drags (we want
@@ -123,9 +125,12 @@ export default function DragDropMenu({
       out.push({ kind: 'hublike', which: 'hub' });
       out.push({ kind: 'hublike', which: 'splitter' });
       out.push({ kind: 'hublike', which: 'merger' });
-      // Target only consumes — only useful when the user dragged from a
-      // source handle (looking for a consumer).
-      if (lookingFor === 'consumer') out.push({ kind: 'target' });
+      // Target and Sink only consume — only useful when the user dragged
+      // from a source handle (looking for a consumer).
+      if (lookingFor === 'consumer') {
+        out.push({ kind: 'target' });
+        out.push({ kind: 'sink' });
+      }
       return out;
     }
 
@@ -151,7 +156,10 @@ export default function DragDropMenu({
     out.push({ kind: 'hublike', which: 'hub' });
     out.push({ kind: 'hublike', which: 'splitter' });
     out.push({ kind: 'hublike', which: 'merger' });
-    if (lookingFor === 'consumer') out.push({ kind: 'target' });
+    if (lookingFor === 'consumer') {
+      out.push({ kind: 'target' });
+      out.push({ kind: 'sink' });
+    }
     return out;
   }, [allowInterface, needsItemPick, effectiveItemId, lookingFor, placeableBlueprints]);
 
@@ -165,6 +173,7 @@ export default function DragDropMenu({
       if (c.kind === 'hublike') return c.which.includes(q);
       if (c.kind === 'interface') return c.which.includes(q);
       if (c.kind === 'target') return 'target'.includes(q);
+      if (c.kind === 'sink') return 'sink'.includes(q);
       return false;
     });
   }, [query, candidates]);
@@ -189,6 +198,7 @@ export default function DragDropMenu({
       onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
     else if (c.kind === 'hublike') onPick({ kind: 'hublike', which: c.which });
     else if (c.kind === 'target') onPick({ kind: 'target', resolvedItemId });
+    else if (c.kind === 'sink') onPick({ kind: 'sink', resolvedItemId });
     else onPick({ kind: 'interface', which: c.which });
   };
 
@@ -315,6 +325,20 @@ export default function DragDropMenu({
                 iconNode={<Target className="h-4 w-4 text-emerald-300" />}
                 title="Target"
                 subtitle={item ? `time to reach a count of ${item.name}` : 'time-to-reach goal'}
+                onHover={hover}
+                onPick={onPickRow}
+              />
+            );
+          }
+          if (c.kind === 'sink') {
+            return (
+              <SimpleRow
+                key="sink"
+                index={i}
+                active={active}
+                iconNode={<Trash2 className="h-4 w-4 text-cyan-300" />}
+                title="Sink"
+                subtitle={item ? `consume ${item.name} for sink points` : 'awesome sink'}
                 onHover={hover}
                 onPick={onPickRow}
               />

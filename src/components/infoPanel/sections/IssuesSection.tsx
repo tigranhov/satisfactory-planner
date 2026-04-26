@@ -44,6 +44,10 @@ function nodeLabel(node: GraphNode | undefined, gameData: GameData): string {
       return d.targetItemId
         ? `Target: ${gameData.items[d.targetItemId]?.name ?? d.targetItemId}`
         : 'Target';
+    case 'sink':
+      return d.sinkItemId
+        ? `Sink: ${gameData.items[d.sinkItemId]?.name ?? d.sinkItemId}`
+        : 'Sink';
   }
 }
 
