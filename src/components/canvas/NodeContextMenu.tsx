@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Copy, Package, Pencil, Trash2, Wand2 } from 'lucide-react';
+import { Copy, Package, Pencil, Sigma, Trash2, Wand2 } from 'lucide-react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
 import CountEditor from './editors/CountEditor';
@@ -41,6 +41,7 @@ interface Props {
   onExtract?: () => void;
   onEdit?: () => void;
   onAutoFill?: () => void;
+  onOptimize?: () => void;
   status?: NodeStatus;
   onStatusChange?: (status: NodeStatus | undefined) => void;
   note?: string;
@@ -59,6 +60,7 @@ export default function NodeContextMenu({
   onExtract,
   onEdit,
   onAutoFill,
+  onOptimize,
   status,
   onStatusChange,
   note,
@@ -100,6 +102,18 @@ export default function NodeContextMenu({
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
               <Wand2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onOptimize && (
+            <button
+              onClick={() => {
+                onOptimize();
+                onClose();
+              }}
+              title="Optimize chain"
+              className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
+            >
+              <Sigma className="h-3.5 w-3.5" />
             </button>
           )}
           {onEdit && (

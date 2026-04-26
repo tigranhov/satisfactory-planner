@@ -38,6 +38,7 @@ import NodeContextMenu from './NodeContextMenu';
 import EdgeContextMenu from './EdgeContextMenu';
 import DragDropMenu, { type DragDropChoice } from './DragDropMenu';
 import AutoFillModal from './AutoFillModal';
+import OptimizeChainModal from './OptimizeChainModal';
 import {
   applyAutoFillResult,
   computeAutoFill,
@@ -225,6 +226,7 @@ export default function GraphCanvas() {
     edgeId: string;
   } | null>(null);
   const [autoFillTarget, setAutoFillTarget] = useState<{ nodeId: string } | null>(null);
+  const [optimizeTarget, setOptimizeTarget] = useState<{ nodeId: string } | null>(null);
   const [dragMenu, setDragMenu] = useState<{
     screen: { x: number; y: number };
     flow: { x: number; y: number };
@@ -1008,6 +1010,23 @@ export default function GraphCanvas() {
     return rows.some((r) => !r.connected && !r.raw && r.availableRecipes.length > 0);
   }, [nodeMenuRecipe, activeGraph]);
 
+  // Optimize shows only when the recipe has at least one upstream non-extraction
+  // recipe feeding it — without an upstream chain, strict-boundary filtering
+  // leaves the LP with just the recipe itself, so there's nothing meaningful
+  // to swap into.
+  const nodeMenuOptimizable = useMemo(() => {
+    if (!nodeMenuRecipe || !activeGraph) return false;
+    const nodeById = new Map(activeGraph.nodes.map((n) => [n.id, n] as const));
+    for (const e of activeGraph.edges) {
+      if (e.target !== nodeMenuRecipe.nodeId) continue;
+      const src = nodeById.get(e.source);
+      if (!src || src.data.kind !== 'recipe') continue;
+      const recipe = gameData.recipes[src.data.recipeId];
+      if (recipe && !recipe.isExtraction) return true;
+    }
+    return false;
+  }, [nodeMenuRecipe, activeGraph]);
+
   // Shared helper for the per-node-field bulk edits driven by the context
   // menu — lets setNodeStatus / setNodeNote stay one-liners.
   const patchNodesData = useCallback(
@@ -1154,6 +1173,11 @@ export default function GraphCanvas() {
               ? () => setAutoFillTarget({ nodeId: nodeMenuRecipe.nodeId })
               : undefined
           }
+          onOptimize={
+            nodeMenuRecipe && nodeMenuTargets.size === 1 && nodeMenuOptimizable
+              ? () => setOptimizeTarget({ nodeId: nodeMenuRecipe.nodeId })
+              : undefined
+          }
           recipe={
             nodeMenuRecipe
               ? {
@@ -1222,6 +1246,12 @@ export default function GraphCanvas() {
           if (autoFillTarget) applyAutoFill(autoFillTarget.nodeId, selections);
           setAutoFillTarget(null);
         }}
+      />
+      <OptimizeChainModal
+        open={!!optimizeTarget}
+        graphId={activeGraphId}
+        targetNodeId={optimizeTarget?.nodeId ?? null}
+        onClose={() => setOptimizeTarget(null)}
       />
     </div>
   );
