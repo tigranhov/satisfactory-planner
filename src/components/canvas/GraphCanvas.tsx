@@ -84,6 +84,7 @@ import {
   kindFromReactFlowType,
   snapPosition,
 } from '@/lib/canvasPlacement';
+import { computeAlignedY } from '@/lib/alignDrag';
 
 // Session-scoped clipboard of copied nodes + their internal edges. Stored at
 // module scope so it survives component remounts (e.g. navigating subgraphs).
@@ -189,7 +190,7 @@ export default function GraphCanvas() {
   const blueprints = useBlueprintStore((s) => s.blueprints);
   const store = useGraphStore;
   const enter = useNavigationStore((s) => s.enter);
-  const { screenToFlowPosition, setCenter } = useReactFlow();
+  const { screenToFlowPosition, setCenter, getInternalNode } = useReactFlow();
   const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
   const clearPendingFocus = useUiStore((s) => s.clearPendingFocus);
   const clockStrategy = useUiStore((s) => s.clockStrategy);
@@ -267,15 +268,56 @@ export default function GraphCanvas() {
     clearPendingFocus();
   }, [nodes, pendingFocusNodeId, setCenter, clearPendingFocus]);
 
-  // React Flow fires drag-stop with the primary node plus every node that
-  // moved with it (multi-select drag). Persist all of them — updating only
-  // the primary leaves siblings stale in graphStore, and the next sync tick
-  // snaps them back to their pre-drag coordinates.
+  // `startY` is the no-edges fallback Y when align-drag can't anchor.
+  // `active` flips on first override so onNodeDragStop knows to pull final
+  // position from nodesRef (our override) instead of the dragged-Node payload
+  // (React Flow's grid-snapped value).
+  const alignDragRef = useRef<{ startY: number; active: boolean } | null>(null);
+
+  const onNodeDragStart = useCallback((_e: React.MouseEvent, node: Node) => {
+    alignDragRef.current = { startY: node.position.y, active: false };
+  }, []);
+
+  const onNodeDrag = useCallback(
+    (event: React.MouseEvent, node: Node, dragged: Node[]) => {
+      if (dragged.length !== 1) return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      const internal = getInternalNode(node.id);
+      if (!internal) return;
+      const g = store.getState().graphs[activeGraphId];
+      if (!g) return;
+      const cursorFlow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const aligned = computeAlignedY({
+        draggedNode: internal,
+        internalNodeById: getInternalNode,
+        edges: g.edges,
+        cursorFlowY: cursorFlow.y,
+      });
+      const targetY = aligned ?? alignDragRef.current?.startY ?? node.position.y;
+      if (targetY === node.position.y) return;
+      if (alignDragRef.current) alignDragRef.current.active = true;
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === node.id ? { ...n, position: { x: n.position.x, y: targetY } } : n,
+        ),
+      );
+    },
+    [activeGraphId, getInternalNode, screenToFlowPosition, setNodes, store],
+  );
+
+  // For an align-drag, dragged[i].position carries React Flow's grid-snapped
+  // Y, not our override. Pull the rendered Y from nodesRef instead.
   const onNodeDragStop = useCallback(
     (_e: React.MouseEvent, _node: Node, dragged: Node[]) => {
+      const wasAligning = alignDragRef.current?.active === true;
+      alignDragRef.current = null;
       const state = store.getState();
+      const renderedById = wasAligning
+        ? new Map(nodesRef.current.map((n) => [n.id, n.position]))
+        : null;
       for (const n of dragged) {
-        state.updateNode(activeGraphId, n.id, { position: n.position });
+        const pos = renderedById?.get(n.id) ?? n.position;
+        state.updateNode(activeGraphId, n.id, { position: pos });
       }
     },
     [activeGraphId, store],
@@ -979,6 +1021,8 @@ export default function GraphCanvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onNodesDelete={onNodesDelete}
