@@ -1,16 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ArrowLeft,
-  LogIn,
-  LogOut,
-  Merge,
-  Package,
-  Search,
-  Split,
-  Target,
-  Trash2,
-  Waypoints,
-} from 'lucide-react';
+import { ArrowLeft, Package, Search } from 'lucide-react';
 import { loadGameData, getProducibleItems, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
@@ -18,6 +7,7 @@ import { clampMenuPosition } from '@/lib/popover';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
+import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 
@@ -57,27 +47,6 @@ interface Props {
   onAddTarget?: (flowPosition: { x: number; y: number }) => void;
   onAddSink?: (flowPosition: { x: number; y: number }) => void;
 }
-
-const HUBLIKE_BUTTONS = [
-  { kind: 'hub' as const, icon: Waypoints, title: 'Add Hub', hoverClass: 'hover:text-amber-300' },
-  { kind: 'splitter' as const, icon: Split, title: 'Add Splitter (1 → 3)', hoverClass: 'hover:text-cyan-300' },
-  { kind: 'merger' as const, icon: Merge, title: 'Add Merger (3 → 1)', hoverClass: 'hover:text-cyan-300' },
-];
-
-const INTERFACE_BUTTONS = [
-  {
-    kind: 'input' as const,
-    icon: LogIn,
-    title: 'Add Input (connect to set type)',
-    hoverClass: 'hover:text-sky-300',
-  },
-  {
-    kind: 'output' as const,
-    icon: LogOut,
-    title: 'Add Output (connect to set type)',
-    hoverClass: 'hover:text-fuchsia-300',
-  },
-];
 
 function filterByName(rows: TopRow[], query: string): TopRow[] {
   const q = query.trim().toLowerCase();
@@ -353,62 +322,42 @@ export default function CanvasContextMenu({
           )}
       </div>
       </div>
-      <div className="flex w-9 flex-col items-center gap-1 border-l border-border bg-panel-hi py-1.5">
-        {HUBLIKE_BUTTONS.map(({ kind, icon: Icon, title, hoverClass }) => (
-          <button
-            key={kind}
-            onClick={() => {
-              onAddHublike?.(kind, flowPosition);
-              onClose();
-            }}
-            title={title}
-            className={`flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel ${hoverClass}`}
-          >
-            <Icon className="h-4 w-4" />
-          </button>
-        ))}
-        {allowInterface && (
-          <>
-            <div className="my-0.5 h-px w-5 bg-border" />
-            {INTERFACE_BUTTONS.map(({ kind, icon: Icon, title, hoverClass }) => (
-              <button
-                key={kind}
-                onClick={() => {
-                  onAddInterface?.(kind, flowPosition);
-                  onClose();
-                }}
-                title={title}
-                className={`flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel ${hoverClass}`}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-          </>
-        )}
-        <div className="my-0.5 h-px w-5 bg-border" />
-        <button
-          onClick={() => {
-            onAddTarget?.(flowPosition);
-            onClose();
-          }}
-          title="Add Target (time-to-reach annotation)"
-          className="flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel hover:text-emerald-300"
-        >
-          <Target className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => {
-            onAddSink?.(flowPosition);
-            onClose();
-          }}
-          title="Add Sink (consumes items for sink points)"
-          className="flex h-7 w-7 items-center justify-center rounded text-[#9aa2b8] hover:bg-panel hover:text-cyan-300"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
+      <UtilityNodeStrip
+        allowInterface={allowInterface}
+        onPick={(choice) => {
+          dispatchUtility(choice, {
+            onAddHublike,
+            onAddInterface,
+            onAddTarget,
+            onAddSink,
+            flowPosition,
+          });
+          onClose();
+        }}
+      />
     </div>
   );
+}
+
+interface DispatchHandlers {
+  onAddHublike?: (
+    kind: 'hub' | 'splitter' | 'merger',
+    flowPosition: { x: number; y: number },
+  ) => void;
+  onAddInterface?: (
+    kind: 'input' | 'output',
+    flowPosition: { x: number; y: number },
+  ) => void;
+  onAddTarget?: (flowPosition: { x: number; y: number }) => void;
+  onAddSink?: (flowPosition: { x: number; y: number }) => void;
+  flowPosition: { x: number; y: number };
+}
+
+function dispatchUtility(choice: UtilityChoice, h: DispatchHandlers): void {
+  if (choice.kind === 'hublike') h.onAddHublike?.(choice.which, h.flowPosition);
+  else if (choice.kind === 'interface') h.onAddInterface?.(choice.which, h.flowPosition);
+  else if (choice.kind === 'target') h.onAddTarget?.(h.flowPosition);
+  else h.onAddSink?.(h.flowPosition);
 }
 
 interface PickerRowProps {

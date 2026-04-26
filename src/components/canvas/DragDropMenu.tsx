@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Merge, Search, Split, Target, Trash2, Waypoints } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Search } from 'lucide-react';
 import {
   getConsumableItems,
   getProducibleItems,
@@ -19,6 +19,7 @@ import {
   PickerRow,
   RecipeRowContent,
 } from './CanvasContextMenu';
+import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 import type { HublikeKind } from '@/models/factory';
@@ -51,14 +52,12 @@ interface Props {
 }
 
 // Flat, indexable candidate list drives both rendering and keyboard nav.
+// Utility-node kinds (hublike/interface/target/sink) live in the side strip,
+// not the searchable list — see UtilityNodeStrip.
 type Candidate =
   | { kind: 'item'; item: Item }
-  | { kind: 'interface'; which: InterfaceKind }
-  | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'recipe'; recipe: Recipe }
-  | { kind: 'blueprint'; bp: Blueprint }
-  | { kind: 'target' }
-  | { kind: 'sink' };
+  | { kind: 'blueprint'; bp: Blueprint };
 
 // Items to surface per drag direction: consumers for source-drags (we want
 // something that uses the item), producers for target-drags (we want
@@ -115,22 +114,12 @@ export default function DragDropMenu({
 
   const candidates = useMemo<Candidate[]>(() => {
     const out: Candidate[] = [];
-    // Stage A: unset handle, no item chosen yet. User picks an item first
-    // (producers or consumers of that item become stage B). Hub-likes and
-    // all placeable blueprints remain available as direct shortcuts —
-    // they're itemless-compatible.
+    // Stage A: unset handle, no item chosen yet. User picks an item first;
+    // producers or consumers of that item drive stage B. Placeable blueprints
+    // surface as direct shortcuts since they're itemless-compatible.
     if (needsItemPick) {
       for (const it of itemsByDirection[lookingFor]) out.push({ kind: 'item', item: it });
       for (const bp of placeableBlueprints) out.push({ kind: 'blueprint', bp });
-      out.push({ kind: 'hublike', which: 'hub' });
-      out.push({ kind: 'hublike', which: 'splitter' });
-      out.push({ kind: 'hublike', which: 'merger' });
-      // Target and Sink only consume — only useful when the user dragged
-      // from a source handle (looking for a consumer).
-      if (lookingFor === 'consumer') {
-        out.push({ kind: 'target' });
-        out.push({ kind: 'sink' });
-      }
       return out;
     }
 
@@ -150,18 +139,8 @@ export default function DragDropMenu({
       );
       if (matches) out.push({ kind: 'blueprint', bp });
     }
-    if (allowInterface) {
-      out.push({ kind: 'interface', which: lookingFor === 'consumer' ? 'output' : 'input' });
-    }
-    out.push({ kind: 'hublike', which: 'hub' });
-    out.push({ kind: 'hublike', which: 'splitter' });
-    out.push({ kind: 'hublike', which: 'merger' });
-    if (lookingFor === 'consumer') {
-      out.push({ kind: 'target' });
-      out.push({ kind: 'sink' });
-    }
     return out;
-  }, [allowInterface, needsItemPick, effectiveItemId, lookingFor, placeableBlueprints]);
+  }, [needsItemPick, effectiveItemId, lookingFor, placeableBlueprints]);
 
   const filtered = useMemo<Candidate[]>(() => {
     const q = query.trim().toLowerCase();
@@ -169,12 +148,7 @@ export default function DragDropMenu({
     return candidates.filter((c) => {
       if (c.kind === 'item') return c.item.name.toLowerCase().includes(q);
       if (c.kind === 'recipe') return c.recipe.name.toLowerCase().includes(q);
-      if (c.kind === 'blueprint') return c.bp.name.toLowerCase().includes(q);
-      if (c.kind === 'hublike') return c.which.includes(q);
-      if (c.kind === 'interface') return c.which.includes(q);
-      if (c.kind === 'target') return 'target'.includes(q);
-      if (c.kind === 'sink') return 'sink'.includes(q);
-      return false;
+      return c.bp.name.toLowerCase().includes(q);
     });
   }, [query, candidates]);
 
@@ -194,12 +168,15 @@ export default function DragDropMenu({
     }
     const resolvedItemId = effectiveItemId || undefined;
     if (c.kind === 'recipe') onPick({ kind: 'recipe', recipeId: c.recipe.id, resolvedItemId });
-    else if (c.kind === 'blueprint')
-      onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
-    else if (c.kind === 'hublike') onPick({ kind: 'hublike', which: c.which });
-    else if (c.kind === 'target') onPick({ kind: 'target', resolvedItemId });
-    else if (c.kind === 'sink') onPick({ kind: 'sink', resolvedItemId });
-    else onPick({ kind: 'interface', which: c.which });
+    else onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
+  };
+
+  const pickUtility = (choice: UtilityChoice) => {
+    const resolvedItemId = effectiveItemId || undefined;
+    if (choice.kind === 'hublike') onPick({ kind: 'hublike', which: choice.which });
+    else if (choice.kind === 'interface') onPick({ kind: 'interface', which: choice.which });
+    else if (choice.kind === 'target') onPick({ kind: 'target', resolvedItemId });
+    else onPick({ kind: 'sink', resolvedItemId });
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -216,146 +193,91 @@ export default function DragDropMenu({
     }
   };
 
-  const MENU_W = 340;
+  const MENU_W = 380;
   const MENU_H = 420;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
   return (
     <div
       ref={rootRef}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
+      className="fixed z-50 flex overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
       style={{ left, top, width: MENU_W, height: MENU_H }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <Header
-        item={item}
-        lookingFor={lookingFor}
-        needsItemPick={needsItemPick}
-        onBack={pickedItem ? () => { setPickedItem(null); setQuery(''); } : undefined}
-      />
-      <div className="relative border-b border-border p-2">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7388]" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={needsItemPick ? 'Search items...' : 'Search...'}
-          className="w-full rounded border border-border bg-panel-hi py-1.5 pl-8 pr-2 text-sm text-[#e6e8ee] outline-none focus:border-accent"
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header
+          item={item}
+          lookingFor={lookingFor}
+          needsItemPick={needsItemPick}
+          onBack={pickedItem ? () => { setPickedItem(null); setQuery(''); } : undefined}
         />
+        <div className="relative border-b border-border p-2">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7388]" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={needsItemPick ? 'Search items...' : 'Search...'}
+            className="w-full rounded border border-border bg-panel-hi py-1.5 pl-8 pr-2 text-sm text-[#e6e8ee] outline-none focus:border-accent"
+          />
+        </div>
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {filtered.length === 0 && (
+            <div className="p-3 text-center text-xs text-[#6b7388]">No matches</div>
+          )}
+          {filtered.map((c, i) => {
+            const active = i === activeIndex;
+            const hover = () => setActiveIndex(i);
+            const onPickRow = () => pick(c);
+            if (c.kind === 'item') {
+              return (
+                <ItemRowButton
+                  key={`item-${c.item.id}`}
+                  item={c.item}
+                  index={i}
+                  active={active}
+                  onHover={hover}
+                  onPick={onPickRow}
+                />
+              );
+            }
+            if (c.kind === 'recipe') {
+              return (
+                <RecipeRow
+                  key={`rec-${c.recipe.id}`}
+                  index={i}
+                  active={active}
+                  recipe={c.recipe}
+                  itemId={itemId}
+                  lookingFor={lookingFor}
+                  onHover={hover}
+                  onPick={onPickRow}
+                />
+              );
+            }
+            return (
+              <BlueprintRowButton
+                key={`bp-${c.bp.id}`}
+                bp={c.bp}
+                index={i}
+                active={active}
+                onHover={hover}
+                onPick={onPickRow}
+              />
+            );
+          })}
+        </div>
       </div>
-      <div
-        ref={listRef}
-        className="flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {filtered.length === 0 && (
-          <div className="p-3 text-center text-xs text-[#6b7388]">No matches</div>
-        )}
-        {filtered.map((c, i) => {
-          const active = i === activeIndex;
-          const hover = () => setActiveIndex(i);
-          const onPickRow = () => pick(c);
-          if (c.kind === 'item') {
-            return (
-              <ItemRowButton
-                key={`item-${c.item.id}`}
-                item={c.item}
-                index={i}
-                active={active}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          if (c.kind === 'interface') {
-            const accent = c.which === 'input' ? 'text-sky-300' : 'text-fuchsia-300';
-            return (
-              <SimpleRow
-                key={`iface-${c.which}`}
-                index={i}
-                active={active}
-                iconNode={
-                  <div className={`flex h-5 w-5 items-center justify-center rounded bg-panel-hi ${accent}`}>
-                    {c.which === 'input' ? '⇥' : '↦'}
-                  </div>
-                }
-                title={c.which === 'input' ? 'New Input' : 'New Output'}
-                subtitle={item ? `carries ${item.name}` : 'boundary port'}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          if (c.kind === 'hublike') {
-            const { Icon, label, subtitle, tint } = HUBLIKE_ROW_PRESET[c.which];
-            return (
-              <SimpleRow
-                key={`hub-${c.which}`}
-                index={i}
-                active={active}
-                iconNode={<Icon className={`h-4 w-4 ${tint}`} />}
-                title={label}
-                subtitle={subtitle}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          if (c.kind === 'recipe') {
-            return (
-              <RecipeRow
-                key={`rec-${c.recipe.id}`}
-                index={i}
-                active={active}
-                recipe={c.recipe}
-                itemId={itemId}
-                lookingFor={lookingFor}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          if (c.kind === 'target') {
-            return (
-              <SimpleRow
-                key="target"
-                index={i}
-                active={active}
-                iconNode={<Target className="h-4 w-4 text-emerald-300" />}
-                title="Target"
-                subtitle={item ? `time to reach a count of ${item.name}` : 'time-to-reach goal'}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          if (c.kind === 'sink') {
-            return (
-              <SimpleRow
-                key="sink"
-                index={i}
-                active={active}
-                iconNode={<Trash2 className="h-4 w-4 text-cyan-300" />}
-                title="Sink"
-                subtitle={item ? `consume ${item.name} for sink points` : 'awesome sink'}
-                onHover={hover}
-                onPick={onPickRow}
-              />
-            );
-          }
-          return (
-            <BlueprintRowButton
-              key={`bp-${c.bp.id}`}
-              bp={c.bp}
-              index={i}
-              active={active}
-              onHover={hover}
-              onPick={onPickRow}
-            />
-          );
-        })}
-      </div>
+      <UtilityNodeStrip
+        allowInterface={allowInterface}
+        showTargetSink={lookingFor === 'consumer'}
+        onPick={pickUtility}
+      />
     </div>
   );
 }
@@ -404,40 +326,6 @@ function Header({
     </div>
   );
 }
-
-function SimpleRow({
-  index,
-  active,
-  iconNode,
-  title,
-  subtitle,
-  onHover,
-  onPick,
-}: {
-  index: number;
-  active: boolean;
-  iconNode: React.ReactNode;
-  title: string;
-  subtitle: string;
-  onHover: () => void;
-  onPick: () => void;
-}) {
-  return (
-    <PickerRow index={index} active={active} onHover={onHover} onPick={onPick}>
-      <div className="flex h-5 w-5 shrink-0 items-center justify-center">{iconNode}</div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{title}</div>
-        <div className="truncate text-[10px] text-[#6b7388]">{subtitle}</div>
-      </div>
-    </PickerRow>
-  );
-}
-
-const HUBLIKE_ROW_PRESET: Record<HublikeKind, { Icon: typeof Waypoints; label: string; subtitle: string; tint: string }> = {
-  hub: { Icon: Waypoints, label: 'Hub', subtitle: 'single-item passthrough', tint: 'text-amber-300' },
-  splitter: { Icon: Split, label: 'Splitter', subtitle: '1 → 3 on-demand split', tint: 'text-cyan-300' },
-  merger: { Icon: Merge, label: 'Merger', subtitle: '3 → 1 combine', tint: 'text-cyan-300' },
-};
 
 function RecipeRow({
   index,
