@@ -20,7 +20,6 @@ import {
 } from './CanvasContextMenu';
 import PickerHeader from './PickerHeader';
 import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
-import { sortRecipes } from '@/lib/recipeSort';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 import type { HublikeKind } from '@/models/factory';
@@ -128,14 +127,13 @@ export default function DragDropMenu({
 
     // Stage B: we know the item (committed or picked in stage A).
     // Recipes first — the most common choice when dragging from a handle.
-    const recipes = sortRecipes(
-      (lookingFor === 'consumer'
+    // Loader returns these alternates-last, so no extra sort needed.
+    const recipes =
+      lookingFor === 'consumer'
         ? getRecipesConsuming(gameData, effectiveItemId)
-        : getRecipesProducing(gameData, effectiveItemId)
-      ).filter((r) => !r.manualOnly),
-    );
+        : getRecipesProducing(gameData, effectiveItemId);
     for (const r of recipes) {
-      out.push({ kind: 'recipe', recipe: r });
+      if (!r.manualOnly) out.push({ kind: 'recipe', recipe: r });
     }
     const matchKind = lookingFor === 'consumer' ? 'input' : 'output';
     for (const bp of placeableBlueprints) {

@@ -9,7 +9,6 @@ import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import PickerHeader from './PickerHeader';
 import UtilityNodeStrip from './UtilityNodeStrip';
-import { sortRecipes } from '@/lib/recipeSort';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 
@@ -124,8 +123,9 @@ export default function CanvasContextMenu({
     const bps = (blueprintsByOutputItem.get(selectedItem.id) ?? [])
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name));
-    const recipes = sortRecipes(
-      getRecipesProducing(gameData, selectedItem.id).filter((r) => !r.manualOnly),
+    // Loader already sorts alternates-last; filter preserves order.
+    const recipes = getRecipesProducing(gameData, selectedItem.id).filter(
+      (r) => !r.manualOnly,
     );
     return [
       ...bps.map<RecipePickRow>((bp) => ({ kind: 'blueprint', bp })),
