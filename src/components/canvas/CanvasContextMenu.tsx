@@ -8,7 +8,8 @@ import { useBlueprintStore } from '@/store/blueprintStore';
 import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import PickerHeader from './PickerHeader';
-import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
+import UtilityNodeStrip from './UtilityNodeStrip';
+import { sortRecipes } from '@/lib/recipeSort';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 
@@ -123,13 +124,9 @@ export default function CanvasContextMenu({
     const bps = (blueprintsByOutputItem.get(selectedItem.id) ?? [])
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name));
-    const recipes = getRecipesProducing(gameData, selectedItem.id)
-      .filter((r) => !r.manualOnly)
-      .slice()
-      .sort((a, b) => {
-        if (a.alternate !== b.alternate) return a.alternate ? 1 : -1;
-        return a.name.localeCompare(b.name);
-      });
+    const recipes = sortRecipes(
+      getRecipesProducing(gameData, selectedItem.id).filter((r) => !r.manualOnly),
+    );
     return [
       ...bps.map<RecipePickRow>((bp) => ({ kind: 'blueprint', bp })),
       ...recipes.map<RecipePickRow>((recipe) => ({ kind: 'recipe', recipe })),
@@ -316,39 +313,15 @@ export default function CanvasContextMenu({
       <UtilityNodeStrip
         allowInterface={allowInterface}
         onPick={(choice) => {
-          dispatchUtility(choice, {
-            onAddHublike,
-            onAddInterface,
-            onAddTarget,
-            onAddSink,
-            flowPosition,
-          });
+          if (choice.kind === 'hublike') onAddHublike?.(choice.which, flowPosition);
+          else if (choice.kind === 'interface') onAddInterface?.(choice.which, flowPosition);
+          else if (choice.kind === 'target') onAddTarget?.(flowPosition);
+          else onAddSink?.(flowPosition);
           onClose();
         }}
       />
     </div>
   );
-}
-
-interface DispatchHandlers {
-  onAddHublike?: (
-    kind: 'hub' | 'splitter' | 'merger',
-    flowPosition: { x: number; y: number },
-  ) => void;
-  onAddInterface?: (
-    kind: 'input' | 'output',
-    flowPosition: { x: number; y: number },
-  ) => void;
-  onAddTarget?: (flowPosition: { x: number; y: number }) => void;
-  onAddSink?: (flowPosition: { x: number; y: number }) => void;
-  flowPosition: { x: number; y: number };
-}
-
-function dispatchUtility(choice: UtilityChoice, h: DispatchHandlers): void {
-  if (choice.kind === 'hublike') h.onAddHublike?.(choice.which, h.flowPosition);
-  else if (choice.kind === 'interface') h.onAddInterface?.(choice.which, h.flowPosition);
-  else if (choice.kind === 'target') h.onAddTarget?.(h.flowPosition);
-  else h.onAddSink?.(h.flowPosition);
 }
 
 interface PickerRowProps {

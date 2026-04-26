@@ -20,6 +20,7 @@ import {
 } from './CanvasContextMenu';
 import PickerHeader from './PickerHeader';
 import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
+import { sortRecipes } from '@/lib/recipeSort';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 import type { HublikeKind } from '@/models/factory';
@@ -88,7 +89,9 @@ export default function DragDropMenu({
   const activeGraphId = useActiveGraphId();
   const blueprints = useBlueprintStore((s) => s.blueprints);
 
-  usePopoverDismiss(rootRef, onClose, { escape: true });
+  // Esc routing is handled in onKeyDown so stage B can step back to stage A
+  // before closing — same shape as CanvasContextMenu.
+  usePopoverDismiss(rootRef, onClose);
 
   useEffect(() => inputRef.current?.focus(), [pickedItem]);
 
@@ -125,12 +128,14 @@ export default function DragDropMenu({
 
     // Stage B: we know the item (committed or picked in stage A).
     // Recipes first — the most common choice when dragging from a handle.
-    const recipes =
-      lookingFor === 'consumer'
+    const recipes = sortRecipes(
+      (lookingFor === 'consumer'
         ? getRecipesConsuming(gameData, effectiveItemId)
-        : getRecipesProducing(gameData, effectiveItemId);
+        : getRecipesProducing(gameData, effectiveItemId)
+      ).filter((r) => !r.manualOnly),
+    );
     for (const r of recipes) {
-      if (!r.manualOnly) out.push({ kind: 'recipe', recipe: r });
+      out.push({ kind: 'recipe', recipe: r });
     }
     const matchKind = lookingFor === 'consumer' ? 'input' : 'output';
     for (const bp of placeableBlueprints) {
@@ -180,21 +185,42 @@ export default function DragDropMenu({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      // Stage B → stage A; only an unset-handle drag has a stage A to fall
+      // back to (committed-handle drags skip straight to stage B).
+      if (pickedItem) {
+        setPickedItem(null);
+        setQuery('');
+      } else {
+        onClose();
+      }
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex((i) => Math.min(filtered.length - 1, i + 1));
-    } else if (e.key === 'ArrowUp') {
+      return;
+    }
+    if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex((i) => Math.max(0, i - 1));
-    } else if (e.key === 'Enter') {
+      return;
+    }
+    if (e.key === 'Enter') {
       e.preventDefault();
       const c = filtered[activeIndex];
       if (c) pick(c);
+      return;
+    }
+    if (e.key === 'Backspace' && query === '' && pickedItem) {
+      e.preventDefault();
+      setPickedItem(null);
     }
   };
 
   const MENU_W = 380;
-  const MENU_H = 420;
+  const MENU_H = 440;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
 
   return (
@@ -208,6 +234,7 @@ export default function DragDropMenu({
         <PickerHeader
           label={HEADER_LABEL[needsItemPick ? 'browse' : 'item'][lookingFor]}
           item={item}
+          optionCount={needsItemPick ? undefined : candidates.length}
           onBack={pickedItem ? () => { setPickedItem(null); setQuery(''); } : undefined}
         />
         <div className="relative border-b border-border p-2">

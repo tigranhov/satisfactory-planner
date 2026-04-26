@@ -101,7 +101,7 @@ export default function NodeContextMenu({
               title="Auto-fill inputs"
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
-              <Wand2 className="h-3.5 w-3.5" />
+              <Wand2 className="h-4 w-4" />
             </button>
           )}
           {onOptimize && (
@@ -113,7 +113,7 @@ export default function NodeContextMenu({
               title="Optimize chain"
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
-              <Sigma className="h-3.5 w-3.5" />
+              <Sigma className="h-4 w-4" />
             </button>
           )}
           {onEdit && (
@@ -125,7 +125,7 @@ export default function NodeContextMenu({
               title="Edit blueprint"
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
           {onExtract && (
@@ -137,7 +137,7 @@ export default function NodeContextMenu({
               title="Extract to blueprint"
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
-              <Package className="h-3.5 w-3.5" />
+              <Package className="h-4 w-4" />
             </button>
           )}
           <button
@@ -148,7 +148,7 @@ export default function NodeContextMenu({
             title="Duplicate (Ctrl+D)"
             className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-4 w-4" />
           </button>
           <button
             onClick={() => {
@@ -158,7 +158,7 @@ export default function NodeContextMenu({
             title="Delete (Del)"
             className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-red-400"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
