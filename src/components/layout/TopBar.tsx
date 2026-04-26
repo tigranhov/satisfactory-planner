@@ -11,11 +11,19 @@ import {
   ListTodo,
   Pencil,
   Plus,
+  Redo2,
   RotateCw,
   Settings,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 import { useGraphStore } from '@/store/graphStore';
+import {
+  commitHistory,
+  selectCanRedo,
+  selectCanUndo,
+  useHistoryStore,
+} from '@/store/historyStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import { useProjectStore } from '@/store/projectStore';
@@ -31,6 +39,9 @@ import {
   switchProjectPersistent,
 } from '@/data/projectPersistence';
 import { useUpdater } from '@/hooks/useUpdater';
+
+const ICON_BUTTON_CLASS =
+  'rounded bg-panel-hi p-1.5 text-[#9aa2b8] hover:bg-border hover:text-[#e6e8ee] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-panel-hi disabled:hover:text-[#9aa2b8]';
 
 export default function TopBar() {
   const stack = useNavigationStore((s) => s.stack);
@@ -52,9 +63,12 @@ export default function TopBar() {
   const setBookOpen = useUiStore((s) => s.setBookOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const canUndo = useHistoryStore(selectCanUndo);
+  const canRedo = useHistoryStore(selectCanRedo);
 
   const handleAddFactory = () => {
     const factoryGraphId = newGraphId();
+    commitHistory();
     registerGraph(factoryGraphId, 'Factory');
     addNodeToActive(activeGraphId, { x: 200, y: 200 }, {
       kind: 'factory',
@@ -88,6 +102,24 @@ export default function TopBar() {
       </div>
       <div className="flex items-center gap-2">
         <UpdateChip />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => useHistoryStore.getState().undo()}
+            disabled={!canUndo}
+            className={ICON_BUTTON_CLASS}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => useHistoryStore.getState().redo()}
+            disabled={!canRedo}
+            className={ICON_BUTTON_CLASS}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+        </div>
         <button
           onClick={() => activeProjectId && setTaskPanelOpen(activeProjectId, !taskPanelOpen)}
           disabled={!activeProjectId}

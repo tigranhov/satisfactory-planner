@@ -6,6 +6,7 @@ interface BlueprintState {
   blueprints: Record<BlueprintId, Blueprint>;
   loaded: boolean;
   hydrate: (bps: Blueprint[]) => void;
+  replaceBlueprints: (blueprints: Record<BlueprintId, Blueprint>) => void;
   addBlueprint: (
     bp: Omit<Blueprint, 'id' | 'createdAt' | 'updatedAt'>,
   ) => BlueprintId;
@@ -25,6 +26,8 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
       blueprints: Object.fromEntries(bps.map((bp) => [bp.id, bp])),
       loaded: true,
     })),
+
+  replaceBlueprints: (blueprints) => set(() => ({ blueprints })),
 
   addBlueprint: (bp) => {
     const id = newBlueprintId();

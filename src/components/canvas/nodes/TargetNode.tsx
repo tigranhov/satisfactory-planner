@@ -5,6 +5,7 @@ import IconOrLabel from '@/components/ui/IconOrLabel';
 import { loadGameData } from '@/data/loader';
 import { handleIdForTarget } from '@/models/factory';
 import { useGraphStore } from '@/store/graphStore';
+import { commitHistory } from '@/store/historyStore';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import { statusBorderClass } from '@/lib/nodeStatus';
 import { formatDuration } from '@/lib/format';
@@ -44,6 +45,7 @@ function TargetNode({ id, data, selected }: NodeProps) {
     }
     const next = Math.floor(parsed);
     if (next === nodeData.targetCount) return;
+    commitHistory();
     updateNode(activeGraphId, id, { data: { ...nodeData, targetCount: next } });
   };
 

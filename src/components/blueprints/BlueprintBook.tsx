@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, MapPin, MoreVertical, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { useBlueprintStore } from '@/store/blueprintStore';
+import { commitHistory } from '@/store/historyStore';
 import { loadGameData } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import InlineItemText from '@/components/ui/InlineItemText';
@@ -57,6 +58,7 @@ export default function BlueprintBook({ open, onClose }: Props) {
   }, [blueprints, query]);
 
   const handleNew = () => {
+    commitHistory();
     addBlueprint({
       name: 'Untitled blueprint',
       description: '',
@@ -171,6 +173,7 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
   const commitName = () => {
     const trimmed = nameDraft.trim();
     if (trimmed && trimmed !== blueprint.name) {
+      commitHistory();
       updateBlueprint(blueprint.id, { name: trimmed });
     } else {
       setNameDraft(blueprint.name);
@@ -181,6 +184,7 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
   const commitDesc = () => {
     const trimmed = descDraft.trim();
     if (trimmed !== (blueprint.description ?? '')) {
+      commitHistory();
       updateBlueprint(blueprint.id, { description: trimmed });
     }
     setEditingDesc(false);
@@ -191,10 +195,14 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
+    const current = blueprint.tags ?? [];
+    if (tags.length === current.length && tags.every((t, i) => t === current[i])) return;
+    commitHistory();
     updateBlueprint(blueprint.id, { tags });
   };
 
   const duplicate = () => {
+    commitHistory();
     addBlueprint({
       name: `${blueprint.name} copy`,
       description: blueprint.description,
@@ -206,7 +214,8 @@ function BlueprintCard({ blueprint, onClose }: CardProps) {
   };
 
   const del = () => {
-    if (window.confirm(`Delete blueprint "${blueprint.name}"? This cannot be undone.`)) {
+    if (window.confirm(`Delete blueprint "${blueprint.name}"?`)) {
+      commitHistory();
       removeBlueprint(blueprint.id);
     }
   };

@@ -14,6 +14,13 @@ import {
 } from '@xyflow/react';
 import { useActiveGraph, useActiveGraphId } from '@/hooks/useActiveGraph';
 import { useGraphStore } from '@/store/graphStore';
+import {
+  abortHistoryTransaction,
+  beginHistoryTransaction,
+  commitHistory,
+  commitHistoryTransaction,
+  useHistoryStore,
+} from '@/store/historyStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { loadGameData } from '@/data/loader';
 import RecipeNode from './nodes/RecipeNode';
@@ -274,8 +281,14 @@ export default function GraphCanvas() {
   // (React Flow's grid-snapped value).
   const alignDragRef = useRef<{ startY: number; active: boolean } | null>(null);
 
+  // dragStartPositions captures positions before the drag so dragStop can
+  // detect "no movement" and abort the history transaction on a click-no-drag.
+  const dragStartPositionsRef = useRef<Map<string, { x: number; y: number }> | null>(null);
+
   const onNodeDragStart = useCallback((_e: React.MouseEvent, node: Node) => {
     alignDragRef.current = { startY: node.position.y, active: false };
+    dragStartPositionsRef.current = new Map(nodesRef.current.map((n) => [n.id, { ...n.position }]));
+    beginHistoryTransaction();
   }, []);
 
   const onNodeDrag = useCallback(
@@ -311,30 +324,50 @@ export default function GraphCanvas() {
     (_e: React.MouseEvent, _node: Node, dragged: Node[]) => {
       const wasAligning = alignDragRef.current?.active === true;
       alignDragRef.current = null;
+      const startPositions = dragStartPositionsRef.current;
+      dragStartPositionsRef.current = null;
       const state = store.getState();
       const renderedById = wasAligning
         ? new Map(nodesRef.current.map((n) => [n.id, n.position]))
         : null;
+      let moved = false;
       for (const n of dragged) {
         const pos = renderedById?.get(n.id) ?? n.position;
+        const start = startPositions?.get(n.id);
+        if (!start || start.x !== pos.x || start.y !== pos.y) moved = true;
         state.updateNode(activeGraphId, n.id, { position: pos });
       }
+      if (moved) commitHistoryTransaction();
+      else abortHistoryTransaction();
     },
     [activeGraphId, store],
   );
 
+  // A Delete-key press on a node fires onNodesDelete + onEdgesDelete (one for
+  // the node, one for its cascaded edges). Open a single transaction that the
+  // next microtask commits so both handlers land in one undo entry.
+  const ensureDeleteTransaction = useCallback(() => {
+    if (useHistoryStore.getState().staged) return;
+    beginHistoryTransaction();
+    queueMicrotask(() => commitHistoryTransaction());
+  }, []);
+
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
+      if (deleted.length === 0) return;
+      ensureDeleteTransaction();
       for (const n of deleted) store.getState().removeNode(activeGraphId, n.id);
     },
-    [activeGraphId, store],
+    [activeGraphId, ensureDeleteTransaction, store],
   );
 
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
+      if (deleted.length === 0) return;
+      ensureDeleteTransaction();
       for (const e of deleted) store.getState().removeEdge(activeGraphId, e.id);
     },
-    [activeGraphId, store],
+    [activeGraphId, ensureDeleteTransaction, store],
   );
 
   // Resolves item consistency, commits a fresh interface node's itemId on
@@ -411,12 +444,15 @@ export default function GraphCanvas() {
     (connection: Connection) => {
       pendingConnectRef.current = null;
       if (!connection.source || !connection.target) return;
-      commitAndAddEdge({
+      beginHistoryTransaction();
+      const ok = commitAndAddEdge({
         source: connection.source,
         sourceHandle: connection.sourceHandle,
         target: connection.target,
         targetHandle: connection.targetHandle,
       });
+      if (ok) commitHistoryTransaction();
+      else abortHistoryTransaction();
     },
     [commitAndAddEdge],
   );
@@ -487,6 +523,7 @@ export default function GraphCanvas() {
     (recipeId: string, cursor: { x: number; y: number }) => {
       if (!gameData.recipes[recipeId]) return;
       const position = centerOnCursor(cursor, 'recipe', gridSize, snapToGrid);
+      commitHistory();
       store.getState().addNode(activeGraphId, position, {
         kind: 'recipe',
         recipeId,
@@ -502,6 +539,7 @@ export default function GraphCanvas() {
   const onAddInterface = useCallback(
     (kind: 'input' | 'output', cursor: { x: number; y: number }) => {
       const position = centerOnCursor(cursor, kind, gridSize, snapToGrid);
+      commitHistory();
       store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
@@ -511,6 +549,7 @@ export default function GraphCanvas() {
   const onPickBlueprint = useCallback(
     (blueprintId: string, cursor: { x: number; y: number }) => {
       const position = centerOnCursor(cursor, 'blueprint', gridSize, snapToGrid);
+      commitHistory();
       placeBlueprintOnActiveGraph(blueprintId, position);
       setMenu(null);
     },
@@ -520,6 +559,7 @@ export default function GraphCanvas() {
   const onAddHublike = useCallback(
     (kind: 'hub' | 'splitter' | 'merger', cursor: { x: number; y: number }) => {
       const position = centerOnCursor(cursor, kind, gridSize, snapToGrid);
+      commitHistory();
       store.getState().addNode(activeGraphId, position, { kind });
       setMenu(null);
     },
@@ -529,6 +569,7 @@ export default function GraphCanvas() {
   const onAddTarget = useCallback(
     (cursor: { x: number; y: number }) => {
       const position = centerOnCursor(cursor, 'target', gridSize, snapToGrid);
+      commitHistory();
       store.getState().addNode(activeGraphId, position, {
         kind: 'target',
         targetCount: 1000,
@@ -541,6 +582,7 @@ export default function GraphCanvas() {
   const onAddSink = useCallback(
     (cursor: { x: number; y: number }) => {
       const position = centerOnCursor(cursor, 'sink', gridSize, snapToGrid);
+      commitHistory();
       store.getState().addNode(activeGraphId, position, { kind: 'sink' });
       setMenu(null);
     },
@@ -554,6 +596,7 @@ export default function GraphCanvas() {
   const onDragDropPick = useCallback(
     (choice: DragDropChoice) => {
       if (!dragMenu) return;
+      commitHistory();
       const { flow, sourceNodeId, sourceHandleId, sourceHandleType, itemId: dragItemId } = dragMenu;
       const isFromSource = sourceHandleType === 'source';
       // When the drag was unset the picker collects the user's item choice
@@ -724,6 +767,7 @@ export default function GraphCanvas() {
   const deleteTargets = useCallback(
     (ids: Set<string>) => {
       if (ids.size === 0) return;
+      commitHistory();
       for (const id of ids) store.getState().removeNode(activeGraphId, id);
     },
     [activeGraphId, store],
@@ -732,6 +776,7 @@ export default function GraphCanvas() {
   const pasteClipboard = useCallback(
     (targetAnchor: { x: number; y: number } | null) => {
       if (!clipboard || clipboard.nodes.length === 0) return;
+      commitHistory();
       // Anchor: top-left of the copied bounding box. Offset places that anchor
       // at targetAnchor (cursor for Ctrl+V) or original+offset (Ctrl+D).
       const minX = Math.min(...clipboard.nodes.map((n) => n.position.x));
@@ -801,6 +846,17 @@ export default function GraphCanvas() {
         case 'd':
           h.duplicateTargets(h.resolveTargets());
           e.preventDefault();
+          return;
+        case 'z':
+          // Ctrl/Cmd+Shift+Z = redo, plain Ctrl/Cmd+Z = undo.
+          if (e.shiftKey) useHistoryStore.getState().redo();
+          else useHistoryStore.getState().undo();
+          e.preventDefault();
+          return;
+        case 'y':
+          // Windows redo alias.
+          useHistoryStore.getState().redo();
+          e.preventDefault();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -860,6 +916,7 @@ export default function GraphCanvas() {
       const g = store.getState().graphs[activeGraphId];
       const node = g?.nodes.find((n) => n.id === nodeId);
       if (!node || node.data.kind !== 'recipe') return;
+      commitHistory();
       store.getState().updateNode(activeGraphId, nodeId, {
         data: { ...node.data, ...patch },
       });
@@ -872,6 +929,7 @@ export default function GraphCanvas() {
       const g = store.getState().graphs[activeGraphId];
       const node = g?.nodes.find((n) => n.id === nodeId);
       if (!node || node.data.kind !== 'blueprint') return;
+      commitHistory();
       store.getState().updateNode(activeGraphId, nodeId, {
         data: { ...node.data, ...patch },
       });
@@ -886,6 +944,7 @@ export default function GraphCanvas() {
       const g = store.getState().graphs[activeGraphId];
       const node = g?.nodes.find((n) => n.id === nodeId);
       if (!node || node.data.kind !== 'factory') return;
+      commitHistory();
       store.getState().updateNode(activeGraphId, nodeId, {
         data: { ...node.data, label },
       });
@@ -899,6 +958,7 @@ export default function GraphCanvas() {
       const g = store.getState().graphs[activeGraphId];
       const target = g?.nodes.find((n) => n.id === targetNodeId);
       if (!target) return;
+      commitHistory();
       // React Flow already measured existing nodes; feed those rects to the
       // layout so new nodes stack past (not onto) whatever is already placed.
       const occupied: OccupiedRect[] = nodesRef.current.map((n) => ({
@@ -954,6 +1014,7 @@ export default function GraphCanvas() {
     (nodeIds: Set<string>, patch: (data: NodeData) => Partial<NodeData>) => {
       const g = store.getState().graphs[activeGraphId];
       if (!g) return;
+      commitHistory();
       for (const id of nodeIds) {
         const node = g.nodes.find((n) => n.id === id);
         if (!node) continue;
@@ -1135,7 +1196,10 @@ export default function GraphCanvas() {
         <EdgeContextMenu
           screenPosition={edgeMenu.screen}
           onClose={() => setEdgeMenu(null)}
-          onRemove={() => store.getState().removeEdge(activeGraphId, edgeMenu.edgeId)}
+          onRemove={() => {
+            commitHistory();
+            store.getState().removeEdge(activeGraphId, edgeMenu.edgeId);
+          }}
         />
       )}
       {dragMenu && (

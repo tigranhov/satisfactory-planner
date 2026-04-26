@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useGraphStore } from '@/store/graphStore';
 import { useBlueprintStore } from '@/store/blueprintStore';
+import { commitHistory } from '@/store/historyStore';
 import { useActiveGraphId } from './useActiveGraph';
 import { useNavigationStore, selectActiveGraphId } from '@/store/navigationStore';
 import { newEdgeId, newNodeId } from '@/lib/ids';
@@ -101,6 +102,10 @@ export function extractSelectionToBlueprint(
 
   const selectedNodes = src.nodes.filter((n) => selection.has(n.id));
   if (selectedNodes.length === 0) return null;
+
+  // Single history entry covers the cross-store extract (graph removals +
+  // blueprint creation + new bp-instance node + boundary edges).
+  commitHistory();
 
   const internalNodes: GraphNode[] = selectedNodes.map((n) => ({
     id: n.id,

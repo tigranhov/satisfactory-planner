@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useGraphStore } from '@/store/graphStore';
 import { useBlueprintStore } from '@/store/blueprintStore';
+import { commitHistory } from '@/store/historyStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUiStore } from '@/store/uiStore';
 import { loadGameData } from '@/data/loader';
@@ -103,6 +104,7 @@ export default function TasksPanel() {
   const costData = useMemo(() => plannedBuildCost(graphs, gameData), [graphs]);
 
   const markBuilt = (graphId: GraphId, node: GraphNode) => {
+    commitHistory();
     updateNode(graphId, node.id, { data: { ...node.data, status: 'built' } });
   };
 

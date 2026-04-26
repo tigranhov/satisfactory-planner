@@ -1,4 +1,5 @@
 import { useGraphStore } from '@/store/graphStore';
+import { useHistoryStore } from '@/store/historyStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useNavigationStore } from '@/store/navigationStore';
 import { ROOT_GRAPH_ID } from '@/lib/ids';
@@ -124,6 +125,9 @@ export async function loadProjectBootstrap(): Promise<void> {
       useNavigationStore.getState().reset();
     }
   }
+  // Project just loaded — discard any residual history that belongs to a
+  // prior session / bootstrap path so undo doesn't time-travel across loads.
+  useHistoryStore.getState().clear();
 }
 
 async function bootstrapFirstRun(): Promise<void> {
@@ -187,6 +191,7 @@ export async function createProjectPersistent(name: string): Promise<ProjectId> 
   useProjectStore.getState().setActiveProject(id);
   useGraphStore.getState().replaceGraphs({ [ROOT_GRAPH_ID]: emptyRoot() });
   useNavigationStore.getState().reset();
+  useHistoryStore.getState().clear();
   primeAutosaveSnapshot();
   await Promise.all([writeActiveProject(), writeIndex()]);
   return id;
@@ -205,6 +210,7 @@ export async function switchProjectPersistent(id: ProjectId): Promise<void> {
       : { [ROOT_GRAPH_ID]: emptyRoot() };
   useGraphStore.getState().replaceGraphs(normalizeSinkHandleIds(nextGraphs));
   useNavigationStore.getState().reset();
+  useHistoryStore.getState().clear();
   primeAutosaveSnapshot();
   await writeIndex();
 }
