@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   getConsumableItems,
   getProducibleItems,
@@ -7,7 +7,6 @@ import {
   getRecipesProducing,
   loadGameData,
 } from '@/data/loader';
-import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
 import { useBlueprintStore } from '@/store/blueprintStore';
@@ -19,6 +18,7 @@ import {
   PickerRow,
   RecipeRowContent,
 } from './CanvasContextMenu';
+import PickerHeader from './PickerHeader';
 import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
@@ -205,10 +205,9 @@ export default function DragDropMenu({
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header
+        <PickerHeader
+          label={HEADER_LABEL[needsItemPick ? 'browse' : 'item'][lookingFor]}
           item={item}
-          lookingFor={lookingFor}
-          needsItemPick={needsItemPick}
           onBack={pickedItem ? () => { setPickedItem(null); setQuery(''); } : undefined}
         />
         <div className="relative border-b border-border p-2">
@@ -286,46 +285,6 @@ const HEADER_LABEL: Record<'browse' | 'item', Record<'consumer' | 'producer', st
   browse: { consumer: 'Consume item', producer: 'Produce item' },
   item: { consumer: 'Consume', producer: 'Produce' },
 };
-
-function Header({
-  item,
-  lookingFor,
-  needsItemPick,
-  onBack,
-}: {
-  item: { name: string; icon?: string } | undefined;
-  lookingFor: 'consumer' | 'producer';
-  needsItemPick: boolean;
-  onBack?: () => void;
-}) {
-  const label = HEADER_LABEL[needsItemPick ? 'browse' : 'item'][lookingFor];
-  return (
-    <div className="flex items-center gap-2 border-b border-border bg-panel-hi px-3 py-2">
-      {onBack ? (
-        <button
-          onClick={onBack}
-          title="Back to items"
-          className="rounded p-0.5 text-[#9aa2b8] hover:bg-panel hover:text-[#e6e8ee]"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </button>
-      ) : (
-        <ArrowRight className="h-3.5 w-3.5 text-accent" />
-      )}
-      <span className="text-xs uppercase tracking-wider text-[#9aa2b8]">{label}</span>
-      {item && (
-        <>
-          <IconOrLabel
-            iconBasename={item.icon}
-            name={item.name}
-            className="h-4 w-4 rounded"
-          />
-          <span className="truncate text-xs font-medium">{item.name}</span>
-        </>
-      )}
-    </div>
-  );
-}
 
 function RecipeRow({
   index,

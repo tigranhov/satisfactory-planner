@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Package, Search } from 'lucide-react';
+import { Package, Search } from 'lucide-react';
 import { loadGameData, getProducibleItems, getRecipesProducing } from '@/data/loader';
 import IconOrLabel from '@/components/ui/IconOrLabel';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
@@ -7,6 +7,7 @@ import { clampMenuPosition } from '@/lib/popover';
 import { useBlueprintStore } from '@/store/blueprintStore';
 import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
+import PickerHeader from './PickerHeader';
 import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
 import type { Item, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
@@ -231,29 +232,19 @@ export default function CanvasContextMenu({
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex min-w-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b border-border bg-panel-hi px-2 py-1.5">
-        {showingRecipes && selectedItem ? (
-          <>
-            <button
-              onClick={() => {
+      <PickerHeader
+        label={selectedItem ? 'Add' : 'Add node'}
+        item={selectedItem ?? undefined}
+        optionCount={selectedItem ? rowsForItem.length : undefined}
+        onBack={
+          selectedItem
+            ? () => {
                 setSelectedItem(null);
                 setQuery('');
-              }}
-              className="rounded p-1 text-[#6b7388] hover:bg-panel hover:text-[#e6e8ee]"
-              title="Back (Esc)"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </button>
-            <IconOrLabel iconBasename={selectedItem.icon} name={selectedItem.name} />
-            <span className="truncate font-medium">{selectedItem.name}</span>
-            <span className="ml-auto text-xs text-[#6b7388]">
-              {rowsForItem.length} option{rowsForItem.length === 1 ? '' : 's'}
-            </span>
-          </>
-        ) : (
-          <span className="text-xs uppercase tracking-wider text-[#6b7388]">Add node</span>
-        )}
-      </div>
+              }
+            : undefined
+        }
+      />
 
       <div className="relative border-b border-border p-2">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7388]" />
