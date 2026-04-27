@@ -39,6 +39,7 @@ import EdgeContextMenu from './EdgeContextMenu';
 import DragDropMenu, { type DragDropChoice } from './DragDropMenu';
 import AutoFillModal from './AutoFillModal';
 import OptimizeChainModal from './OptimizeChainModal';
+import YieldSolverModal, { type YieldSource } from './YieldSolverModal';
 import {
   applyAutoFillResult,
   computeAutoFill,
@@ -128,6 +129,21 @@ function reactFlowTypeForKind(kind: NodeData['kind']): ReactFlowNodeType {
   return kind === 'input' || kind === 'output' ? 'interface' : kind;
 }
 const edgeTypes = { rate: RateEdge };
+
+// True when the drag's source node is something the yield solver can seed
+// itself from — extractor recipes carry a known rate, Input nodes carry a
+// committed item (rate prompted in the modal). Other source-handle drags
+// don't qualify yet.
+function isYieldSolverDragSource(graph: Graph | undefined, nodeId: string): boolean {
+  if (!graph) return false;
+  const node = graph.nodes.find((n) => n.id === nodeId);
+  if (!node) return false;
+  if (node.data.kind === 'recipe') {
+    const recipe = gameData.recipes[node.data.recipeId];
+    return !!recipe && recipe.isExtraction === true;
+  }
+  return node.data.kind === 'input' && !!node.data.itemId;
+}
 
 function singleSelectedNodeOfKind<K extends NodeData['kind']>(
   graph: Graph | undefined,
@@ -227,6 +243,7 @@ export default function GraphCanvas() {
   } | null>(null);
   const [autoFillTarget, setAutoFillTarget] = useState<{ nodeId: string } | null>(null);
   const [optimizeTarget, setOptimizeTarget] = useState<{ nodeId: string } | null>(null);
+  const [yieldTarget, setYieldTarget] = useState<YieldSource | null>(null);
   const [dragMenu, setDragMenu] = useState<{
     screen: { x: number; y: number };
     flow: { x: number; y: number };
@@ -689,6 +706,46 @@ export default function GraphCanvas() {
         // Same single-input shape as Target — source-drag only.
         data = { kind: 'sink', sinkItemId: choiceItemId };
         newHandle = handleIdForSink();
+      } else if (choice.kind === 'yieldSolver') {
+        // Open the yield modal seeded from the drag source. Bypasses the
+        // node-place-and-wire path entirely; the modal builds its own chain
+        // off the existing source node.
+        const g = store.getState().graphs[activeGraphId];
+        const node = g?.nodes.find((n) => n.id === sourceNodeId);
+        if (!node || !sourceHandleId) {
+          setDragMenu(null);
+          return;
+        }
+        let yieldRate = 0;
+        let yieldItemId = choiceItemId;
+        if (node.data.kind === 'recipe') {
+          const recipe = gameData.recipes[node.data.recipeId];
+          const product = recipe?.products[0];
+          if (recipe && product) {
+            yieldRate = itemsPerMinute(
+              recipe,
+              product.amount,
+              node.data.clockSpeed,
+              node.data.count,
+            );
+            yieldItemId = product.itemId;
+          }
+        } else if (node.data.kind === 'input' && node.data.itemId) {
+          yieldItemId = node.data.itemId;
+        }
+        if (!yieldItemId) {
+          setDragMenu(null);
+          return;
+        }
+        setYieldTarget({
+          nodeId: sourceNodeId,
+          itemId: yieldItemId,
+          defaultRate: yieldRate,
+          handle: sourceHandleId,
+          position: node.position,
+        });
+        setDragMenu(null);
+        return;
       } else {
         data = { kind: choice.which };
         newHandle = handleIdForInterface(choice.which);
@@ -1027,6 +1084,79 @@ export default function GraphCanvas() {
     return false;
   }, [nodeMenuRecipe, activeGraph]);
 
+  // Yield Solver source. Two flavors:
+  //  - maxOutput: extractor recipe or Input node (forward direction; "what can
+  //    I make from this?")
+  //  - minInput: Output / Target / Sink with a committed item (reverse
+  //    direction; "what chain produces enough of this?")
+  const nodeMenuYieldSource = useMemo<YieldSource | null>(() => {
+    if (nodeMenuTargets.size !== 1 || !activeGraph) return null;
+    const only = [...nodeMenuTargets][0];
+    const node = activeGraph.nodes.find((n) => n.id === only);
+    if (!node) return null;
+    if (node.data.kind === 'recipe') {
+      const recipe = gameData.recipes[node.data.recipeId];
+      if (!recipe || !recipe.isExtraction) return null;
+      const product = recipe.products[0];
+      if (!product) return null;
+      const defaultRate = itemsPerMinute(
+        recipe,
+        product.amount,
+        node.data.clockSpeed,
+        node.data.count,
+      );
+      return {
+        nodeId: only,
+        itemId: product.itemId,
+        defaultRate,
+        handle: handleIdForProduct(recipe.id, product.itemId, 0),
+        position: node.position,
+        direction: 'maxOutput',
+      };
+    }
+    if (node.data.kind === 'input' && node.data.itemId) {
+      return {
+        nodeId: only,
+        itemId: node.data.itemId,
+        defaultRate: 0,
+        handle: handleIdForInterface('input', node.data.itemId),
+        position: node.position,
+        direction: 'maxOutput',
+      };
+    }
+    if (node.data.kind === 'output' && node.data.itemId) {
+      return {
+        nodeId: only,
+        itemId: node.data.itemId,
+        defaultRate: 60,
+        handle: handleIdForInterface('output', node.data.itemId),
+        position: node.position,
+        direction: 'minInput',
+      };
+    }
+    if (node.data.kind === 'target' && node.data.targetItemId) {
+      return {
+        nodeId: only,
+        itemId: node.data.targetItemId,
+        defaultRate: node.data.targetCount > 0 ? node.data.targetCount : 60,
+        handle: handleIdForTarget(node.data.targetItemId),
+        position: node.position,
+        direction: 'minInput',
+      };
+    }
+    if (node.data.kind === 'sink' && node.data.sinkItemId) {
+      return {
+        nodeId: only,
+        itemId: node.data.sinkItemId,
+        defaultRate: 60,
+        handle: handleIdForSink(),
+        position: node.position,
+        direction: 'minInput',
+      };
+    }
+    return null;
+  }, [nodeMenuTargets, activeGraph]);
+
   // Shared helper for the per-node-field bulk edits driven by the context
   // menu — lets setNodeStatus / setNodeNote stay one-liners.
   const patchNodesData = useCallback(
@@ -1178,6 +1308,11 @@ export default function GraphCanvas() {
               ? () => setOptimizeTarget({ nodeId: nodeMenuRecipe.nodeId })
               : undefined
           }
+          onYield={
+            nodeMenuYieldSource
+              ? () => setYieldTarget(nodeMenuYieldSource)
+              : undefined
+          }
           recipe={
             nodeMenuRecipe
               ? {
@@ -1232,6 +1367,7 @@ export default function GraphCanvas() {
           itemId={dragMenu.itemId}
           handleType={dragMenu.sourceHandleType}
           allowInterface={isSubgraph}
+          allowYieldSolver={isYieldSolverDragSource(activeGraph, dragMenu.sourceNodeId)}
           onClose={() => setDragMenu(null)}
           onPick={onDragDropPick}
         />
@@ -1252,6 +1388,12 @@ export default function GraphCanvas() {
         graphId={activeGraphId}
         targetNodeId={optimizeTarget?.nodeId ?? null}
         onClose={() => setOptimizeTarget(null)}
+      />
+      <YieldSolverModal
+        open={!!yieldTarget}
+        graphId={activeGraphId}
+        source={yieldTarget}
+        onClose={() => setYieldTarget(null)}
       />
     </div>
   );

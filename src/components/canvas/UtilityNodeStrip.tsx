@@ -1,11 +1,12 @@
 import type { ComponentType } from 'react';
-import { LogIn, LogOut, Merge, Split, Target, Trash2, Waypoints } from 'lucide-react';
+import { LogIn, LogOut, Merge, Split, Target, Trash2, TrendingUp, Waypoints } from 'lucide-react';
 
 export type UtilityChoice =
   | { kind: 'hublike'; which: 'hub' | 'splitter' | 'merger' }
   | { kind: 'interface'; which: 'input' | 'output' }
   | { kind: 'target' }
-  | { kind: 'sink' };
+  | { kind: 'sink' }
+  | { kind: 'yieldSolver' };
 
 interface Props {
   // Input/Output boundary nodes are only meaningful inside a subgraph.
@@ -14,6 +15,10 @@ interface Props {
   // source-drag (looking for a consumer). A target-handle drag (looking
   // for a producer) hides them.
   showTargetSink?: boolean;
+  // Drag-from-handle yield-solver entry. Only enabled when the dragged source
+  // node is an extractor or Input — in those cases we know the item + rate
+  // and can seed the modal directly.
+  showYieldSolver?: boolean;
   onPick: (choice: UtilityChoice) => void;
 }
 
@@ -43,6 +48,7 @@ const STRIP_BUTTON_CLASS =
 export default function UtilityNodeStrip({
   allowInterface = false,
   showTargetSink = true,
+  showYieldSolver = false,
   onPick,
 }: Props) {
   return (
@@ -88,6 +94,18 @@ export default function UtilityNodeStrip({
             className={`${STRIP_BUTTON_CLASS} hover:text-cyan-300`}
           >
             <Trash2 className="h-4 w-4" />
+          </button>
+        </>
+      )}
+      {showYieldSolver && (
+        <>
+          <div className="my-0.5 h-px w-5 bg-border" />
+          <button
+            onClick={() => onPick({ kind: 'yieldSolver' })}
+            title="Maximize output…"
+            className={`${STRIP_BUTTON_CLASS} hover:text-emerald-300`}
+          >
+            <TrendingUp className="h-4 w-4" />
           </button>
         </>
       )}

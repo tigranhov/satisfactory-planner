@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Copy, Package, Pencil, Sigma, Trash2, Wand2 } from 'lucide-react';
+import { Copy, Package, Pencil, Sigma, Trash2, TrendingUp, Wand2 } from 'lucide-react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
 import CountEditor from './editors/CountEditor';
@@ -42,6 +42,7 @@ interface Props {
   onEdit?: () => void;
   onAutoFill?: () => void;
   onOptimize?: () => void;
+  onYield?: () => void;
   status?: NodeStatus;
   onStatusChange?: (status: NodeStatus | undefined) => void;
   note?: string;
@@ -61,6 +62,7 @@ export default function NodeContextMenu({
   onEdit,
   onAutoFill,
   onOptimize,
+  onYield,
   status,
   onStatusChange,
   note,
@@ -114,6 +116,18 @@ export default function NodeContextMenu({
               className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-accent"
             >
               <Sigma className="h-4 w-4" />
+            </button>
+          )}
+          {onYield && (
+            <button
+              onClick={() => {
+                onYield();
+                onClose();
+              }}
+              title="Maximize output…"
+              className="rounded p-1 text-[#9aa2b8] hover:bg-panel hover:text-emerald-300"
+            >
+              <TrendingUp className="h-4 w-4" />
             </button>
           )}
           {onEdit && (

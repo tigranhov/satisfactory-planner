@@ -35,7 +35,8 @@ export type DragDropChoice =
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'interface'; which: InterfaceKind }
   | { kind: 'target'; resolvedItemId?: string }
-  | { kind: 'sink'; resolvedItemId?: string };
+  | { kind: 'sink'; resolvedItemId?: string }
+  | { kind: 'yieldSolver'; resolvedItemId?: string };
 
 interface Props {
   screenPosition: { x: number; y: number };
@@ -47,6 +48,9 @@ interface Props {
   // a target (looking for a producer).
   handleType: 'source' | 'target';
   allowInterface?: boolean;
+  // True when the dragged source is an extractor or Input node — the only
+  // surfaces where the yield solver currently knows how to seed itself.
+  allowYieldSolver?: boolean;
   onClose: () => void;
   onPick: (choice: DragDropChoice) => void;
 }
@@ -72,6 +76,7 @@ export default function DragDropMenu({
   itemId,
   handleType,
   allowInterface = false,
+  allowYieldSolver = false,
   onClose,
   onPick,
 }: Props) {
@@ -179,7 +184,8 @@ export default function DragDropMenu({
     if (choice.kind === 'hublike') onPick({ kind: 'hublike', which: choice.which });
     else if (choice.kind === 'interface') onPick({ kind: 'interface', which: choice.which });
     else if (choice.kind === 'target') onPick({ kind: 'target', resolvedItemId });
-    else onPick({ kind: 'sink', resolvedItemId });
+    else if (choice.kind === 'sink') onPick({ kind: 'sink', resolvedItemId });
+    else onPick({ kind: 'yieldSolver', resolvedItemId });
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -300,6 +306,7 @@ export default function DragDropMenu({
       <UtilityNodeStrip
         allowInterface={allowInterface}
         showTargetSink={lookingFor === 'consumer'}
+        showYieldSolver={allowYieldSolver && lookingFor === 'consumer'}
         onPick={pickUtility}
       />
     </div>
