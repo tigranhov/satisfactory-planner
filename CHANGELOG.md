@@ -6,6 +6,55 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-04-27
+
+### Added
+- **Yield Solver.** Right-click an extractor or Input node to
+  maximize output of any item from its rate, or right-click an
+  Output / Target / Sink to plan the cheapest chain that produces
+  it. Multi-output comparison, per-item "Optimize for" picker that
+  filters to auxiliaries the chain actually consumes, builds the
+  full chain on canvas (recipes + raw-resource Input nodes +
+  byproduct Sinks) in one undo step. Also reachable by dragging
+  from an extractor / Input output handle.
+- **Recipe-alternate optimizer.** Right-click any chain recipe
+  → "Optimize chain". LP picks alternate recipes that minimize
+  raw, power, or build cost while staying within the chain's
+  existing inputs (strict boundary — no new resource chains pulled
+  in). Apply rewrites the chain in place; somersloops are
+  excluded with a warning when present.
+- **Undo / redo.** Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y for editor
+  actions: node moves, deletes, recipe swaps, blueprint edits.
+  Cross-store atomic snapshots; drag and Backspace deletes
+  coalesce into one history entry per gesture. History clears on
+  project switch.
+- **Sink node.** New node kind: consumes any item for AWESOME
+  Sink points. Sink points readout in the global Info panel;
+  surplus accounting credits sunk items as fully consumed so
+  closed-loop byproducts don't bleed into the project totals.
+- **Cmd / Ctrl align-drag.** Hold Cmd (Mac) or Ctrl (Win) while
+  dragging a node to snap its handle Y-coordinates onto the node
+  it's near, so flow lines stay horizontal.
+
+### Changed
+- **Picker UX consolidated** across right-click canvas,
+  drag-from-handle, and node menus:
+  - Recipe / Blueprint mode tabs replaced by a unified
+    item + blueprint list with a `BP` badge.
+  - Hub / Splitter / Merger / Target / Sink / Input / Output now
+    share a single side strip across both pickers.
+  - Verb + item-chip header style applied to both pickers.
+  - Esc + Backspace navigate stage B → A → close in the drag
+    picker (matches canvas).
+  - Recipe sort (alternates last) and dimensions aligned.
+  - Node-menu action icons grew from h-3.5 to h-4 to match the
+    side strip.
+
+### Fixed
+- Release skill's changelog extraction recipe now uses awk's
+  literal-regex form so it doesn't silently match zero lines on
+  Windows.
+
 ## [0.9.0] - 2026-04-26
 
 ### Added
@@ -186,7 +235,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.6.0...v0.7.0
