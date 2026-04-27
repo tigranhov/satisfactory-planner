@@ -13,6 +13,7 @@ import {
   handleIndexFromId,
   internalNodeIdFromSubgraphHandle,
   isHublikeKind,
+  isInfinityDemandKind,
   recipeInputs,
   recipeOutputs,
 } from './factory';
@@ -65,13 +66,11 @@ function handleRate(
     return index != null && io[index] ? io[index].rate : 0;
   }
   if (node.data.kind === 'input' && side === 'out') return Number.POSITIVE_INFINITY;
-  if (node.data.kind === 'output' && side === 'in') return Number.POSITIVE_INFINITY;
-  // Target and Sink nodes consume their entire inflow — same demand-infinity
-  // treatment as Output ports so the inbound edge's reported rate equals the
-  // upstream's actual delivery (TargetNode reads it for ETA; SinkNode reads
-  // it for sink-points/min and immediateFlow nets sinks out of surplus).
-  if ((node.data.kind === 'target' || node.data.kind === 'sink') && side === 'in')
-    return Number.POSITIVE_INFINITY;
+  // Output / Target / Sink consume their entire inflow — the inbound edge's
+  // reported rate equals the upstream's actual delivery (TargetNode reads it
+  // for ETA; SinkNode reads it for sink-points/min and immediateFlow nets
+  // sinks out of surplus).
+  if (isInfinityDemandKind(node.data.kind) && side === 'in') return Number.POSITIVE_INFINITY;
   if (node.data.kind === 'blueprint') {
     const bp = node.data as BlueprintNodeData;
     return subgraphHandleRate(bp.blueprintId, bp.count, handleId, side, data, resolver);
@@ -214,19 +213,34 @@ function distributeDemand(
   for (let i = 0; i < N; i++) edgeRate.set(group[i].id, allocation[i]);
 }
 
-// Demand-driven + source-capped flow:
+// Demand-driven + source-capped flow. Edges with rate=Infinity are an
+// "absorbing" sentinel meaning "claim this source's surplus" — Phase 1a
+// marks edges into demand=Infinity targets (Output / Target / Sink), and
+// Phase 1b propagates the mark upstream through hubs that feed those
+// targets. Phase 2a/2b then satisfy finite demands first and split the
+// remaining capacity among the absorbing edges, so a producer feeding both
+// a recipe and an Output doesn't starve the recipe (Miner@600 →
+// {Recipe@180, Output@∞} delivers 180 + 420).
 //   1a. Each non-hublike target handle water-fills its demand across
 //       incoming edges: start with an even split, clip edges whose source
 //       can't supply that share, then redistribute the shortfall to
-//       siblings that still have headroom (or, for Input/Output boundaries
-//       with demand=Infinity, inherit each source's capacity).
-//   1b. Hub-likes are processed in reverse topological order: demand is
-//       pooled across all input edges regardless of handle. edgeInitDemand
-//       snapshots each edge's pre-scaling ask for Phase 3 reporting.
-//   2a. Non-hublike source handles scale their outgoing edges down if
-//       over capacity. Taps (Input source handle) have no cap.
-//   2b. Hub-like source handles do the same, in forward topological order,
-//       with all outgoing edges pooled so splits scale proportionally.
+//       siblings that still have headroom. Demand=Infinity targets just
+//       mark each incoming edge with the absorbing sentinel.
+//   1b. Hub-likes are processed in reverse topological order so each one
+//       reads its downstream demand before setting its own upstream ask.
+//       Non-absorbing hubs distribute total finite demand evenly across
+//       input edges (mergers and single-input hubs share this rule).
+//       Absorbing hubs set inputs to the absorbing sentinel; edgeInitDemand
+//       still records the finite share so Phase 3 satisfaction reflects
+//       real shortage on the recipe side, not the unbounded absorbing side.
+//   2a. Non-hublike source handles scale outgoing edges via scaleSource —
+//       finite-only groups scale proportionally if over capacity, mixed
+//       groups satisfy finite first and split the remainder among
+//       absorbing edges. Unbounded taps (Input) collapse absorbing edges
+//       to their finite ask.
+//   2b. Hub source handles run in forward topo order. Non-absorbing hubs
+//       pool all outgoing edges through scaleSource. Absorbing hubs reuse
+//       the finite-then-absorbing split.
 //   3.  Per target handle: demand, supply, satisfaction; edges inherit
 //       the target's satisfaction ratio.
 export function computeFlows(
@@ -288,11 +302,12 @@ export function computeFlows(
     for (const [handleId, group] of byHandle) {
       const demand = rateOf(node, handleId, 'in');
       if (demand === Number.POSITIVE_INFINITY) {
-        for (const e of group) {
-          const src = nodeById.get(e.source);
-          const cap = rateOf(src, e.sourceHandle, 'out');
-          edgeRate.set(e.id, Number.isFinite(cap) ? cap : 0);
-        }
+        // Demand-Infinity targets (Output / Target / Sink) mark their
+        // incoming edges with the absorbing sentinel — Phase 2a/2b
+        // satisfy finite-demand siblings first and split the source's
+        // remaining cap among these edges, so a producer feeding both a
+        // recipe and an Output doesn't starve the recipe.
+        for (const e of group) edgeRate.set(e.id, Number.POSITIVE_INFINITY);
         continue;
       }
       distributeDemand(group, demand, sourceCapForPhase1a, edgeRate);
@@ -307,34 +322,108 @@ export function computeFlows(
   const hubs = graph.nodes.filter((n) => isHublikeKind(n.data.kind));
   const hubsForward = hubs.length ? topoSortHubs(hubs, graph.edges, nodeById) : [];
   const hubsReverse = hubsForward.slice().reverse();
+
+  // An edge "absorbs" when its target eventually reaches a demand=Infinity
+  // sink — either directly, or via a chain of hubs that have been marked
+  // absorbing first (hence the reverse-topo classification below).
+  const absorbingHubs = new Set<NodeId>();
+  const isAbsorbingEdge = (e: GraphEdge): boolean => {
+    const tgt = nodeById.get(e.target);
+    if (!tgt) return false;
+    if (isInfinityDemandKind(tgt.data.kind)) return true;
+    return isHublikeKind(tgt.data.kind) && absorbingHubs.has(tgt.id);
+  };
+
   for (const hub of hubsReverse) {
-    let totalDemand = 0;
+    let finiteOutDemand = 0;
+    let hubAbsorbing = false;
     const sh = bySource.get(hub.id);
     if (sh) {
       for (const group of sh.values()) {
-        for (const e of group) totalDemand += edgeRate.get(e.id) ?? 0;
+        for (const e of group) {
+          if (isAbsorbingEdge(e)) hubAbsorbing = true;
+          else finiteOutDemand += edgeRate.get(e.id) ?? 0;
+        }
       }
     }
+    if (hubAbsorbing) absorbingHubs.add(hub.id);
+
     const th = byTarget.get(hub.id);
     if (!th) continue;
     let totalInEdges = 0;
     for (const group of th.values()) totalInEdges += group.length;
-    const per = totalInEdges ? totalDemand / totalInEdges : 0;
+    // edgeInitDemand reports the user-meaningful "ask" — the finite-demand
+    // share — so Phase 3 satisfaction reflects real shortage on the recipe
+    // side rather than on the unbounded absorbing side.
+    const reportedPer = totalInEdges ? finiteOutDemand / totalInEdges : 0;
     for (const group of th.values()) {
       for (const e of group) {
-        edgeRate.set(e.id, per);
-        edgeInitDemand.set(e.id, per);
+        edgeRate.set(e.id, hubAbsorbing ? Number.POSITIVE_INFINITY : reportedPer);
+        edgeInitDemand.set(e.id, reportedPer);
       }
     }
   }
 
   const edgeSourceUtil = new Map<string, number>();
+
+  function utilization(finiteSum: number, capacity: number): number {
+    if (capacity > FLOW_EPS) return finiteSum > capacity ? finiteSum / capacity : 1;
+    return finiteSum > FLOW_EPS ? Infinity : 0;
+  }
+
+  // Finite demands first, surplus split equally among absorbing edges; if
+  // finite alone exceeds capacity, scale them and zero the absorbing ones.
+  // Shared by scaleSource's Infinity branch (group: edges with rate=∞ from
+  // Phase 1a/1b) and Phase 2b's absorbing-hub branch (group: edges flagged
+  // by isAbsorbingEdge).
+  const splitFiniteAndAbsorbing = (
+    finiteOuts: GraphEdge[],
+    absorbingOuts: GraphEdge[],
+    finiteSum: number,
+    capacity: number,
+  ) => {
+    const util = utilization(finiteSum, capacity);
+    if (finiteSum > capacity + FLOW_EPS) {
+      const scale = finiteSum > 0 ? capacity / finiteSum : 0;
+      for (const e of finiteOuts) {
+        edgeRate.set(e.id, (edgeRate.get(e.id) ?? 0) * scale);
+        edgeSourceUtil.set(e.id, util);
+      }
+      for (const e of absorbingOuts) {
+        edgeRate.set(e.id, 0);
+        edgeSourceUtil.set(e.id, util);
+      }
+    } else {
+      const surplus = Math.max(0, capacity - finiteSum);
+      const per = absorbingOuts.length ? surplus / absorbingOuts.length : 0;
+      for (const e of finiteOuts) edgeSourceUtil.set(e.id, util);
+      for (const e of absorbingOuts) {
+        edgeRate.set(e.id, per);
+        edgeSourceUtil.set(e.id, util);
+      }
+    }
+  };
+
   const scaleSource = (group: GraphEdge[], capacity: number) => {
-    const sum = group.reduce((s, e) => s + (edgeRate.get(e.id) ?? 0), 0);
-    const util = capacity > FLOW_EPS ? sum / capacity : sum > FLOW_EPS ? Infinity : 0;
+    const finiteEdges: GraphEdge[] = [];
+    const infiniteEdges: GraphEdge[] = [];
+    let finiteSum = 0;
+    for (const e of group) {
+      const r = edgeRate.get(e.id) ?? 0;
+      if (r === Number.POSITIVE_INFINITY) infiniteEdges.push(e);
+      else {
+        finiteEdges.push(e);
+        finiteSum += r;
+      }
+    }
+    if (infiniteEdges.length > 0) {
+      splitFiniteAndAbsorbing(finiteEdges, infiniteEdges, finiteSum, capacity);
+      return;
+    }
+    const util = capacity > FLOW_EPS ? finiteSum / capacity : finiteSum > FLOW_EPS ? Infinity : 0;
     for (const e of group) edgeSourceUtil.set(e.id, util);
-    if (sum > capacity + FLOW_EPS && sum > 0) {
-      const scale = capacity / sum;
+    if (finiteSum > capacity + FLOW_EPS && finiteSum > 0) {
+      const scale = capacity / finiteSum;
       for (const e of group) edgeRate.set(e.id, (edgeRate.get(e.id) ?? 0) * scale);
     }
   };
@@ -346,7 +435,16 @@ export function computeFlows(
     for (const [handleId, group] of byHandle) {
       const capacity = rateOf(node, handleId, 'out');
       if (capacity === Number.POSITIVE_INFINITY) {
-        for (const e of group) edgeSourceUtil.set(e.id, 0);
+        // Unbounded tap (Input). An "absorbing" Infinity edge has no
+        // defined pull from an unbounded source, so it collapses to the
+        // finite ask captured in edgeInitDemand (typically 0 unless a
+        // sibling output has a finite demand).
+        for (const e of group) {
+          if ((edgeRate.get(e.id) ?? 0) === Number.POSITIVE_INFINITY) {
+            edgeRate.set(e.id, edgeInitDemand.get(e.id) ?? 0);
+          }
+          edgeSourceUtil.set(e.id, 0);
+        }
         continue;
       }
       scaleSource(group, capacity);
@@ -356,14 +454,30 @@ export function computeFlows(
   // Phase 2b — hub-like source capacity is the total that landed on the
   // input side in Phase 2a. Pool all outgoing edges across handles so a
   // splitter's three outputs scale proportionally when input supply is
-  // short — matching the game's on-demand split behavior.
+  // short — matching the game's on-demand split behavior. Absorbing hubs
+  // (those feeding a demand=Infinity sink) take the priority path: finite
+  // outputs first, surplus split among absorbing outputs.
   for (const hub of hubsForward) {
     const byHandle = bySource.get(hub.id);
     if (!byHandle) continue;
     const capacity = hubRate(hub.id, 'out');
     const allOut: GraphEdge[] = [];
     for (const group of byHandle.values()) allOut.push(...group);
-    scaleSource(allOut, capacity);
+    if (!absorbingHubs.has(hub.id)) {
+      scaleSource(allOut, capacity);
+      continue;
+    }
+    const finiteOuts: GraphEdge[] = [];
+    const absorbingOuts: GraphEdge[] = [];
+    let finiteSum = 0;
+    for (const e of allOut) {
+      if (isAbsorbingEdge(e)) absorbingOuts.push(e);
+      else {
+        finiteOuts.push(e);
+        finiteSum += edgeRate.get(e.id) ?? 0;
+      }
+    }
+    splitFiniteAndAbsorbing(finiteOuts, absorbingOuts, finiteSum, capacity);
   }
 
   // Phase 3

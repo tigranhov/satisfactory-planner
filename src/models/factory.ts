@@ -117,6 +117,16 @@ export function isHublikeKind(kind: NodeData['kind']): kind is HublikeKind {
   return kind === 'hub' || kind === 'splitter' || kind === 'merger';
 }
 
+// Demand-side unbounded sinks: Output exports, Target annotations, and Sink
+// nodes all consume their entire inflow. Used by flow.ts to mark "absorbing"
+// edges that should claim a producer's surplus instead of competing with
+// finite-demand siblings on equal footing.
+export type InfinityDemandKind = 'output' | 'target' | 'sink';
+
+export function isInfinityDemandKind(kind: NodeData['kind']): kind is InfinityDemandKind {
+  return kind === 'output' || kind === 'target' || kind === 'sink';
+}
+
 // A hub-like's "item type" is derived from whatever flows through it — i.e.
 // the itemId shared by its incident edges. Returns null when the node is
 // disconnected, which UI treats as the "?" unset state.
