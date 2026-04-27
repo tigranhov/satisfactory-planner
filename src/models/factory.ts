@@ -16,6 +16,15 @@ export function somersloopMultiplier(recipe: Recipe, node: RecipeNodeData, data:
   return somersloopBoost(node.somersloops, slots);
 }
 
+// Resource purity scales extractor output only — manufacturers and generators
+// ignore it. `data.resourceDefaults.purities` holds the multipliers
+// (impure 0.5 / normal 1.0 / pure 2.0). Absent purity defaults to 'normal'.
+export function purityMultiplier(recipe: Recipe, node: RecipeNodeData, data: GameData) {
+  if (!recipe.isExtraction) return 1;
+  const purity = node.purity ?? 'normal';
+  return data.resourceDefaults.purities[purity] ?? 1;
+}
+
 export function recipeInputs(recipe: Recipe, node: RecipeNodeData) {
   return recipe.ingredients.map((io) => ({
     itemId: io.itemId,
@@ -24,7 +33,7 @@ export function recipeInputs(recipe: Recipe, node: RecipeNodeData) {
 }
 
 export function recipeOutputs(recipe: Recipe, node: RecipeNodeData, data: GameData) {
-  const mult = somersloopMultiplier(recipe, node, data);
+  const mult = somersloopMultiplier(recipe, node, data) * purityMultiplier(recipe, node, data);
   return recipe.products.map((io) => ({
     itemId: io.itemId,
     rate: itemsPerMinute(recipe, io.amount, node.clockSpeed, node.count) * mult,

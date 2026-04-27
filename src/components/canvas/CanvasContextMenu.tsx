@@ -9,7 +9,8 @@ import { canPlaceBlueprint } from '@/hooks/useBlueprintEditorBridge';
 import { useActiveGraphId } from '@/hooks/useActiveGraph';
 import PickerHeader from './PickerHeader';
 import UtilityNodeStrip from './UtilityNodeStrip';
-import type { Item, Recipe } from '@/data/types';
+import PurityPickerStrip from './PurityPickerStrip';
+import type { Item, Purity, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 
 const gameData = loadGameData();
@@ -31,7 +32,11 @@ interface Props {
   screenPosition: { x: number; y: number };
   flowPosition: { x: number; y: number };
   onClose: () => void;
-  onSelectRecipe: (recipeId: string, flowPosition: { x: number; y: number }) => void;
+  onSelectRecipe: (
+    recipeId: string,
+    flowPosition: { x: number; y: number },
+    purity?: Purity,
+  ) => void;
   onSelectBlueprint?: (blueprintId: string, flowPosition: { x: number; y: number }) => void;
   // Input/Output boundary nodes are only meaningful inside a subgraph.
   allowInterface?: boolean;
@@ -73,6 +78,9 @@ export default function CanvasContextMenu({
   const [query, setQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  // When the user picks an extractor recipe we pause on a third stage so they
+  // can pick a purity. `null` means we're not in that stage.
+  const [pendingExtractor, setPendingExtractor] = useState<Recipe | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -152,13 +160,21 @@ export default function CanvasContextMenu({
     el?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex]);
 
+  const commitRecipe = (recipe: Recipe) => {
+    if (recipe.isExtraction) {
+      setPendingExtractor(recipe);
+      return;
+    }
+    onSelectRecipe(recipe.id, flowPosition);
+  };
+
   const pickItemRow = (item: Item) => {
     const recipes = getRecipesProducing(gameData, item.id).filter((r) => !r.manualOnly);
     const bps = blueprintsByOutputItem.get(item.id) ?? [];
     const total = recipes.length + bps.length;
     if (total === 1) {
       if (bps.length === 1) onSelectBlueprint?.(bps[0].id, flowPosition);
-      else onSelectRecipe(recipes[0].id, flowPosition);
+      else commitRecipe(recipes[0]);
       return;
     }
     setSelectedItem(item);
@@ -171,10 +187,13 @@ export default function CanvasContextMenu({
   };
 
   const pickRecipeRow = (row: RecipePickRow) => {
-    if (row.kind === 'recipe') onSelectRecipe(row.recipe.id, flowPosition);
+    if (row.kind === 'recipe') commitRecipe(row.recipe);
     else onSelectBlueprint?.(row.bp.id, flowPosition);
   };
 
+  // Purity stage takes over the menu — handles its own focus + keys via the
+  // PurityPickerStrip — so the search-stage keys below only apply when
+  // pendingExtractor is null.
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -213,6 +232,18 @@ export default function CanvasContextMenu({
     }
   };
 
+  // Purity stage runs its own key handler — Esc steps back to the recipe list,
+  // Enter commits Normal (the focused default).
+  const onPurityKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setPendingExtractor(null);
+    } else if (e.key === 'Enter' && pendingExtractor) {
+      e.preventDefault();
+      onSelectRecipe(pendingExtractor.id, flowPosition, 'normal');
+    }
+  };
+
   const MENU_W = 380;
   const MENU_H = 440;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
@@ -220,6 +251,24 @@ export default function CanvasContextMenu({
   const searchPlaceholder = showingRecipes
     ? 'Filter recipes and blueprints...'
     : 'Search items and blueprints...';
+
+  if (pendingExtractor) {
+    return (
+      <div
+        ref={rootRef}
+        onKeyDown={onPurityKeyDown}
+        className="fixed z-50 flex overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
+        style={{ left, top, width: MENU_W, height: MENU_H }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <PurityPickerStrip
+          recipe={pendingExtractor}
+          onPick={(purity) => onSelectRecipe(pendingExtractor.id, flowPosition, purity)}
+          onBack={() => setPendingExtractor(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

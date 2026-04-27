@@ -20,17 +20,18 @@ import {
 } from './CanvasContextMenu';
 import PickerHeader from './PickerHeader';
 import UtilityNodeStrip, { type UtilityChoice } from './UtilityNodeStrip';
-import type { Item, Recipe } from '@/data/types';
+import type { Item, Purity, Recipe } from '@/data/types';
 import type { Blueprint } from '@/models/blueprint';
 import type { HublikeKind } from '@/models/factory';
 import type { InterfaceNodeData } from '@/models/graph';
+import PurityPickerStrip from './PurityPickerStrip';
 
 const gameData = loadGameData();
 
 type InterfaceKind = InterfaceNodeData['kind'];
 
 export type DragDropChoice =
-  | { kind: 'recipe'; recipeId: string; resolvedItemId?: string }
+  | { kind: 'recipe'; recipeId: string; resolvedItemId?: string; purity?: Purity }
   | { kind: 'blueprint'; blueprintId: string; resolvedItemId?: string }
   | { kind: 'hublike'; which: HublikeKind }
   | { kind: 'interface'; which: InterfaceKind }
@@ -86,6 +87,9 @@ export default function DragDropMenu({
   // first, then the recipe — mirroring the right-click canvas menu. This
   // holds the item chosen on the first screen.
   const [pickedItem, setPickedItem] = useState<Item | null>(null);
+  // Stage-3 purity stage for extractor recipes — same shape as
+  // CanvasContextMenu so the two flows behave identically.
+  const [pendingExtractor, setPendingExtractor] = useState<Recipe | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -175,8 +179,13 @@ export default function DragDropMenu({
       return;
     }
     const resolvedItemId = effectiveItemId || undefined;
-    if (c.kind === 'recipe') onPick({ kind: 'recipe', recipeId: c.recipe.id, resolvedItemId });
-    else onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
+    if (c.kind === 'recipe') {
+      if (c.recipe.isExtraction) {
+        setPendingExtractor(c.recipe);
+        return;
+      }
+      onPick({ kind: 'recipe', recipeId: c.recipe.id, resolvedItemId });
+    } else onPick({ kind: 'blueprint', blueprintId: c.bp.id, resolvedItemId });
   };
 
   const pickUtility = (choice: UtilityChoice) => {
@@ -223,9 +232,46 @@ export default function DragDropMenu({
     }
   };
 
+  // Purity stage: Esc steps back to the recipe list, Enter commits Normal.
+  const onPurityKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setPendingExtractor(null);
+    } else if (e.key === 'Enter' && pendingExtractor) {
+      e.preventDefault();
+      const resolvedItemId = effectiveItemId || undefined;
+      onPick({ kind: 'recipe', recipeId: pendingExtractor.id, resolvedItemId, purity: 'normal' });
+    }
+  };
+
   const MENU_W = 380;
   const MENU_H = 440;
   const { left, top } = clampMenuPosition(screenPosition, { width: MENU_W, height: MENU_H });
+
+  if (pendingExtractor) {
+    return (
+      <div
+        ref={rootRef}
+        onKeyDown={onPurityKeyDown}
+        className="fixed z-50 flex overflow-hidden rounded-md border border-border bg-panel text-sm shadow-xl"
+        style={{ left, top, width: MENU_W, height: MENU_H }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <PurityPickerStrip
+          recipe={pendingExtractor}
+          onPick={(purity) =>
+            onPick({
+              kind: 'recipe',
+              recipeId: pendingExtractor.id,
+              resolvedItemId: effectiveItemId || undefined,
+              purity,
+            })
+          }
+          onBack={() => setPendingExtractor(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -4,9 +4,11 @@ import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { clampMenuPosition } from '@/lib/popover';
 import CountEditor from './editors/CountEditor';
 import OverclockEditor from './editors/OverclockEditor';
+import PurityEditor from './editors/PurityEditor';
 import SomersloopEditor from './editors/SomersloopEditor';
 import InlineItemText from '@/components/ui/InlineItemText';
 import type { NodeStatus } from '@/models/graph';
+import type { Purity } from '@/data/types';
 
 export interface RecipeControls {
   clockSpeed: number;
@@ -16,6 +18,9 @@ export interface RecipeControls {
   powerMW: number;
   count: number;
   primaryOutput?: { baseRate: number; itemName: string; itemIcon?: string };
+  // Extractors only — both fields are present together.
+  purity?: Purity;
+  onPurity?: (purity: Purity) => void;
   onOverclock: (clockSpeed: number) => void;
   onSomersloop: (somersloops: number) => void;
   onCount: (count: number) => void;
@@ -215,6 +220,12 @@ export default function NodeContextMenu({
       {recipe && (
         <>
           <CountEditor count={recipe.count} onChange={recipe.onCount} />
+          {recipe.purity && recipe.onPurity && (
+            <>
+              <div className="border-t border-border" />
+              <PurityEditor purity={recipe.purity} onChange={recipe.onPurity} />
+            </>
+          )}
           <div className="border-t border-border" />
           <OverclockEditor
             clockSpeed={recipe.clockSpeed}

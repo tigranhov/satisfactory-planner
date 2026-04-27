@@ -1,4 +1,4 @@
-import type { ItemId, RecipeId } from '@/data/types';
+import type { ItemId, Purity, RecipeId } from '@/data/types';
 
 export type GraphId = string;
 export type NodeId = string;
@@ -31,6 +31,10 @@ export interface RecipeNodeData extends BaseNodeData {
   clockSpeed: number; // 0.01 - 2.5 (1.0 = 100%)
   count: number;
   somersloops: number; // 0..machine.somersloopSlots
+  // Resource node purity. Only meaningful when the recipe is an extraction
+  // recipe (recipe.isExtraction); ignored otherwise. Absent = 'normal' so
+  // existing saves load unchanged.
+  purity?: Purity;
 }
 
 export interface FactoryNodeData extends BaseNodeData {

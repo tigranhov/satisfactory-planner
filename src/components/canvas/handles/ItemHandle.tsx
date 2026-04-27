@@ -9,6 +9,9 @@ interface Props {
   itemName: string;
   itemIcon: string;
   rateLabel?: string;
+  // Optional hover title for the rate text — used to expose nominal-vs-actual
+  // detail when the displayed rate is throttled by an upstream bottleneck.
+  rateTitle?: string;
   satisfaction?: number;
 }
 
@@ -19,6 +22,7 @@ export default function ItemHandle({
   itemName,
   itemIcon,
   rateLabel,
+  rateTitle,
   satisfaction,
 }: Props) {
   const isLeft = side === 'left';
@@ -58,7 +62,7 @@ export default function ItemHandle({
         />
       </div>
       {rateLabel && (
-        <span className="text-[10px] text-[#6b7388]">
+        <span className="text-[10px] text-[#6b7388]" title={rateTitle}>
           {rateLabel}
           {isShort && (
             <span className="ml-1 text-orange-400">

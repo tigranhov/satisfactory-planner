@@ -41,6 +41,22 @@ export interface HandleFlow {
   satisfaction: number;
 }
 
+// Min satisfaction across the supplied input handle ids — the multiplier a
+// node's outputs are throttled by. Disconnected handles (no entry in
+// handleFlows) are ignored so a partially-wired node still shows its design
+// rate. Returns 1 when no input is undersupplied.
+export function inputBottleneck(
+  handleFlows: Record<string, HandleFlow> | undefined,
+  handleIds: readonly string[],
+): number {
+  let min = 1;
+  for (const id of handleIds) {
+    const sat = handleFlows?.[id]?.satisfaction;
+    if (sat != null && sat < min) min = sat;
+  }
+  return min;
+}
+
 export interface FlowResult {
   edges: Map<string, EdgeFlow>;
   targetHandles: Map<string, Map<string, HandleFlow>>;
@@ -326,6 +342,81 @@ export function computeFlows(
         edgeInitDemand.set(e.id, per);
       }
     }
+  }
+
+  // Phase 1.5 — propagate input-bottleneck. If a recipe or subgraph instance
+  // is undersupplied on any input, its outputs throttle proportionally and
+  // downstream edges should reflect the reduced flow rather than the
+  // original demand. Iterates because clipping one node's outputs can starve
+  // downstream nodes; monotone-decreasing on edge rates → converges in at
+  // most graph-depth iterations. Hub-likes are pure passthroughs and aren't
+  // candidates. Disconnected input ports are skipped so a partially-wired
+  // recipe still shows its design output (matches the UI convention).
+  interface BottleneckPlan {
+    node: GraphNode;
+    inputs: { groups: GraphEdge[]; demand: number }[];
+    outputs: { group: GraphEdge[]; capacity: number }[];
+  }
+  const plans: BottleneckPlan[] = [];
+  for (const node of graph.nodes) {
+    if (
+      node.data.kind !== 'recipe' &&
+      node.data.kind !== 'blueprint' &&
+      node.data.kind !== 'factory'
+    ) continue;
+    const inputs: BottleneckPlan['inputs'] = [];
+    const inMap = byTarget.get(node.id);
+    if (inMap) {
+      for (const [handleId, group] of inMap) {
+        const demand = handleRate(node, data, resolver, handleId, 'in');
+        if (!Number.isFinite(demand) || demand <= FLOW_EPS || group.length === 0) continue;
+        inputs.push({ groups: group, demand });
+      }
+    }
+    if (inputs.length === 0) continue;
+    const outputs: BottleneckPlan['outputs'] = [];
+    const outMap = bySource.get(node.id);
+    if (outMap) {
+      for (const [handleId, group] of outMap) {
+        const capacity = handleRate(node, data, resolver, handleId, 'out');
+        if (!Number.isFinite(capacity)) continue;
+        outputs.push({ group, capacity });
+      }
+    }
+    if (outputs.length === 0) continue;
+    plans.push({ node, inputs, outputs });
+  }
+
+  const MAX_BOTTLENECK_ITERS = 50;
+  for (let iter = 0; iter < MAX_BOTTLENECK_ITERS; iter++) {
+    let changed = false;
+    for (const plan of plans) {
+      let minSat = 1;
+      for (const { groups, demand } of plan.inputs) {
+        let supply = 0;
+        for (const e of groups) supply += edgeRate.get(e.id) ?? 0;
+        const sat = Math.min(1, supply / demand);
+        if (sat < minSat) minSat = sat;
+      }
+      if (minSat >= 1 - FLOW_EPS) continue;
+      for (const { group, capacity } of plan.outputs) {
+        const cap = capacity * minSat;
+        let sum = 0;
+        for (const e of group) sum += edgeRate.get(e.id) ?? 0;
+        if (sum > cap + FLOW_EPS && sum > 0) {
+          const scale = cap / sum;
+          for (const e of group) {
+            const old = edgeRate.get(e.id) ?? 0;
+            const next = old * scale;
+            if (Math.abs(old - next) > FLOW_EPS) {
+              edgeRate.set(e.id, next);
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+    if (!changed) break;
   }
 
   const edgeSourceUtil = new Map<string, number>();

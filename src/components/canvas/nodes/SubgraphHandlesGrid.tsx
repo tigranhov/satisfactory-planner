@@ -4,7 +4,13 @@ import {
   handleIdForSubgraphInput,
   handleIdForSubgraphOutput,
 } from '@/models/factory';
-import type { GraphInterfaceRates, HandleFlow } from '@/models/flow';
+import {
+  FLOW_EPS,
+  inputBottleneck,
+  type GraphInterfaceRates,
+  type HandleFlow,
+} from '@/models/flow';
+import { formatBottleneckTitle, formatRate } from '@/lib/format';
 import type { InterfaceNodeData } from '@/models/graph';
 
 const gameData = loadGameData();
@@ -32,6 +38,14 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
       icon: item?.icon ?? '?',
     };
   };
+
+  const inputHandleIds: string[] = [];
+  for (const n of inputNodes) {
+    const iface = n.data as InterfaceNodeData;
+    if (iface.itemId) inputHandleIds.push(handleIdForSubgraphInput(n.id, iface.itemId));
+  }
+  const bottleneck = inputBottleneck(handleFlows, inputHandleIds);
+  const isBottlenecked = bottleneck < 1 - FLOW_EPS;
 
   return (
     <div className="grid min-h-[32px] grid-cols-2 gap-0 py-1">
@@ -67,7 +81,8 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
           const iface = n.data as InterfaceNodeData;
           if (!iface.itemId) return null;
           const { name, icon } = renderItem('output', iface);
-          const rate = (rates.outputs.get(n.id) ?? 0) * count;
+          const nominal = (rates.outputs.get(n.id) ?? 0) * count;
+          const actual = nominal * bottleneck;
           return (
             <ItemHandle
               key={n.id}
@@ -76,7 +91,11 @@ export default function SubgraphHandlesGrid({ nodeId, rates, count, handleFlows 
               side="right"
               itemName={name}
               itemIcon={icon}
-              rateLabel={`${rate.toFixed(1)}/min`}
+              rateLabel={formatRate(actual)}
+              rateTitle={
+                isBottlenecked ? formatBottleneckTitle(actual, nominal, bottleneck) : undefined
+              }
+              satisfaction={isBottlenecked ? bottleneck : undefined}
             />
           );
         })}

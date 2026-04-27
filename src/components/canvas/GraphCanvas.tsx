@@ -67,6 +67,7 @@ import {
   itemIdForHandle,
   itemsPerMinute,
   nodePowerMW,
+  purityMultiplier,
   somersloopMultiplier,
 } from '@/models/factory';
 import { useBlueprintStore } from '@/store/blueprintStore';
@@ -76,6 +77,7 @@ import {
   placeBlueprintOnActiveGraph,
 } from '@/hooks/useBlueprintEditorBridge';
 import { ROOT_GRAPH_ID } from '@/lib/ids';
+import type { Purity } from '@/data/types';
 import type {
   BlueprintNodeData,
   Graph,
@@ -539,8 +541,15 @@ export default function GraphCanvas() {
   );
 
   const onPickRecipe = useCallback(
-    (recipeId: string, cursor: { x: number; y: number }) => {
-      if (!gameData.recipes[recipeId]) return;
+    (
+      recipeId: string,
+      cursor: { x: number; y: number },
+      // Only meaningful for extractor recipes — picker enforces this. Plain
+      // manufacturer recipes ignore it.
+      purity?: Purity,
+    ) => {
+      const recipe = gameData.recipes[recipeId];
+      if (!recipe) return;
       const position = centerOnCursor(cursor, 'recipe', gridSize, snapToGrid);
       commitHistory();
       store.getState().addNode(activeGraphId, position, {
@@ -549,6 +558,7 @@ export default function GraphCanvas() {
         clockSpeed: 1,
         count: 1,
         somersloops: 0,
+        ...(recipe.isExtraction ? { purity: purity ?? 'normal' } : {}),
       });
       setMenu(null);
     },
@@ -631,7 +641,14 @@ export default function GraphCanvas() {
       if (choice.kind === 'recipe') {
         const recipe = gameData.recipes[choice.recipeId];
         if (!recipe) return;
-        data = { kind: 'recipe', recipeId: choice.recipeId, clockSpeed: 1, count: 1, somersloops: 0 };
+        data = {
+          kind: 'recipe',
+          recipeId: choice.recipeId,
+          clockSpeed: 1,
+          count: 1,
+          somersloops: 0,
+          ...(recipe.isExtraction ? { purity: choice.purity ?? 'normal' } : {}),
+        };
         if (isFromSource) {
           const list = recipe.ingredients;
           const idx = choiceItemId ? list.findIndex((i) => i.itemId === choiceItemId) : 0;
@@ -956,11 +973,13 @@ export default function GraphCanvas() {
     const primaryItem = primary ? gameData.items[primary.itemId] : undefined;
     const baseRate = primary
       ? itemsPerMinute(recipe, primary.amount, 1, base.data.count) *
-        somersloopMultiplier(recipe, base.data, gameData)
+        somersloopMultiplier(recipe, base.data, gameData) *
+        purityMultiplier(recipe, base.data, gameData)
       : 0;
     return {
       nodeId: base.nodeId,
       data: base.data,
+      isExtraction: recipe.isExtraction === true,
       powerShardSlots: machine?.powerShardSlots ?? 0,
       somersloopSlots: machine?.somersloopSlots ?? 0,
       powerMW: nodePowerMW(recipe, base.data, gameData),
@@ -1323,6 +1342,12 @@ export default function GraphCanvas() {
                   powerMW: nodeMenuRecipe.powerMW,
                   count: nodeMenuRecipe.data.count,
                   primaryOutput: nodeMenuRecipe.primary ?? undefined,
+                  purity: nodeMenuRecipe.isExtraction
+                    ? nodeMenuRecipe.data.purity ?? 'normal'
+                    : undefined,
+                  onPurity: nodeMenuRecipe.isExtraction
+                    ? (purity) => updateRecipeNodeData(nodeMenuRecipe.nodeId, { purity })
+                    : undefined,
                   onOverclock: (clockSpeed) =>
                     updateRecipeNodeData(nodeMenuRecipe.nodeId, { clockSpeed }),
                   onSomersloop: (somersloops) =>

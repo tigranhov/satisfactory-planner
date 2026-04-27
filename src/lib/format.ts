@@ -9,6 +9,12 @@ export function formatRate(rate: number): string {
   return `${rate.toFixed(1)}/min`;
 }
 
+export function formatBottleneckTitle(actual: number, nominal: number, bottleneck: number): string {
+  return `Producing ${formatRate(actual)} — throttled to ${Math.round(
+    bottleneck * 100,
+  )}% by an undersupplied input. Capacity: ${formatRate(nominal)}.`;
+}
+
 // Compact duration formatter, two units max: "<1m", "Xm", "Xh Ym", "Xd Yh".
 // Returns "—" for non-positive / non-finite inputs so callers can use it
 // directly as a placeholder.
