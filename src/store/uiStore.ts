@@ -89,6 +89,7 @@ interface UiState extends PersistedUiShape {
   // global Back/Forward listener can suppress navigation while a modal is up.
   bookOpen: boolean;
   settingsOpen: boolean;
+  calculatorOpen: boolean;
 
   setTaskPanelOpen: (projectId: ProjectId, open: boolean) => void;
   setInfoPanelOpen: (projectId: ProjectId, open: boolean) => void;
@@ -100,6 +101,7 @@ interface UiState extends PersistedUiShape {
   setEdgeStyle: (style: EdgeStyle) => void;
   setBookOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
+  setCalculatorOpen: (open: boolean) => void;
   clearPendingFocus: () => void;
   navigateToNode: (graphId: GraphId, nodeId: NodeId) => void;
 }
@@ -150,6 +152,7 @@ export const useUiStore = create<UiState>((set) => ({
   pendingFocusNodeId: null,
   bookOpen: false,
   settingsOpen: false,
+  calculatorOpen: false,
 
   setTaskPanelOpen: (projectId, open) =>
     set((s) => {
@@ -218,6 +221,9 @@ export const useUiStore = create<UiState>((set) => ({
 
   setSettingsOpen: (open) =>
     set((s) => (s.settingsOpen === open ? s : { settingsOpen: open })),
+
+  setCalculatorOpen: (open) =>
+    set((s) => (s.calculatorOpen === open ? s : { calculatorOpen: open })),
 
   clearPendingFocus: () => set({ pendingFocusNodeId: null }),
 

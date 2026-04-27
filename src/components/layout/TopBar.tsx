@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import {
   BookOpen,
+  Calculator as CalculatorIcon,
   Check,
   ChevronDown,
   ChevronRight,
@@ -30,6 +31,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUiStore } from '@/store/uiStore';
 import { newGraphId } from '@/lib/ids';
 import BlueprintBook from '@/components/blueprints/BlueprintBook';
+import CalculatorModal from '@/components/calculator/CalculatorModal';
 import SettingsModal from './SettingsModal';
 import InlineItemText from '@/components/ui/InlineItemText';
 import {
@@ -63,6 +65,8 @@ export default function TopBar() {
   const setBookOpen = useUiStore((s) => s.setBookOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const calculatorOpen = useUiStore((s) => s.calculatorOpen);
+  const setCalculatorOpen = useUiStore((s) => s.setCalculatorOpen);
   const canUndo = useHistoryStore(selectCanUndo);
   const canRedo = useHistoryStore(selectCanRedo);
 
@@ -151,6 +155,14 @@ export default function TopBar() {
           Blueprints
         </button>
         <button
+          onClick={() => setCalculatorOpen(true)}
+          className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"
+          title="Open calculator"
+        >
+          <CalculatorIcon className="h-4 w-4" />
+          Calculator
+        </button>
+        <button
           onClick={handleAddFactory}
           className="flex items-center gap-1 rounded bg-panel-hi px-3 py-1 text-sm hover:bg-border"
           title="Add nested factory"
@@ -167,6 +179,7 @@ export default function TopBar() {
         </button>
       </div>
       <BlueprintBook open={bookOpen} onClose={() => setBookOpen(false)} />
+      <CalculatorModal open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );

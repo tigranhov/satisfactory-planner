@@ -9,7 +9,7 @@ const MOUSE_FORWARD = 4;
 
 const isModalOpen = (): boolean => {
   const s = useUiStore.getState();
-  return s.bookOpen || s.settingsOpen;
+  return s.bookOpen || s.settingsOpen || s.calculatorOpen;
 };
 
 // Browser-style history navigation:
