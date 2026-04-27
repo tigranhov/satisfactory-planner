@@ -53,6 +53,11 @@ interface GraphState {
   removeEdge: (graphId: GraphId, edgeId: string) => void;
   setNodes: (graphId: GraphId, nodes: GraphNode[]) => void;
   setEdges: (graphId: GraphId, edges: GraphEdge[]) => void;
+  setEdgeLabelOffset: (
+    graphId: GraphId,
+    edgeId: string,
+    offset: { x: number; y: number } | undefined,
+  ) => void;
 }
 
 const rootGraph: Graph = {
@@ -200,5 +205,28 @@ export const useGraphStore = create<GraphState>((set) => ({
       const g = s.graphs[graphId];
       if (!g) return s;
       return { graphs: { ...s.graphs, [graphId]: { ...g, edges } } };
+    }),
+
+  setEdgeLabelOffset: (graphId, edgeId, offset) =>
+    set((s) => {
+      const g = s.graphs[graphId];
+      if (!g) return s;
+      let changed = false;
+      const nextEdges = g.edges.map((e) => {
+        if (e.id !== edgeId) return e;
+        const cur = e.labelOffset;
+        if (!offset) {
+          if (!cur) return e;
+          changed = true;
+          const next: GraphEdge = { ...e };
+          delete next.labelOffset;
+          return next;
+        }
+        if (cur && cur.x === offset.x && cur.y === offset.y) return e;
+        changed = true;
+        return { ...e, labelOffset: { x: offset.x, y: offset.y } };
+      });
+      if (!changed) return s;
+      return { graphs: { ...s.graphs, [graphId]: { ...g, edges: nextEdges } } };
     }),
 }));

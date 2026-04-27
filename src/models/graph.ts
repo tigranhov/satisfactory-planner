@@ -122,6 +122,10 @@ export interface GraphEdge {
   targetHandle: string;
   itemId: ItemId;
   rate: number; // items/min, computed
+  // User-set offset (in flow coords) applied to the edge label and routing
+  // waypoint. Lets the user drag overlapping rate labels apart and reroute
+  // the line through a chosen point. Undefined → render at the natural midpoint.
+  labelOffset?: { x: number; y: number };
 }
 
 export interface Graph {
