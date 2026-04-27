@@ -6,6 +6,35 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-27
+
+### Added
+- **Resource purity for extractors.** Pick Impure / Normal / Pure
+  (×0.5 / ×1.0 / ×2.0) when adding an extractor via the right-click
+  or drag-from-handle menus; Normal is preselected so Enter commits
+  the default. A purity chip on the node shows the current choice;
+  right-click → "Resource Purity" to change it later. Existing
+  extractor nodes load as Normal.
+- **Input bottleneck propagates to outputs.** When a recipe,
+  blueprint, or factory instance is undersupplied on an input, its
+  outputs throttle proportionally — the displayed rate becomes the
+  actual achievable rate with a `(NN%)` annotation, and the outgoing
+  edges carry the real flow so downstream nodes see the reduced
+  supply. Cascades through chains.
+- **Drag rate labels to reroute connections.** Left-drag a rate
+  label to move it; the edge re-routes through that point as two
+  sub-paths in the chosen edge style. Hold Ctrl/Cmd to lock Y to
+  the nearest endpoint handle (mirrors node align-drag).
+  Double-click clears the offset.
+
+### Fixed
+- **Splitter / direct-Output starvation.** A producer feeding both
+  a finite-demand consumer and an Output (or Target/Sink) was
+  misallocating: a 600/min miner feeding {Recipe@180, Output} sent
+  138.5 + 461.5 instead of 180 + 420; the same shape through a
+  Splitter sent 0 to the Output. Flow now satisfies finite demand
+  first and routes the remainder to absorbing taps.
+
 ## [0.10.0] - 2026-04-27
 
 ### Added
@@ -235,7 +264,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.7.0...v0.8.0
