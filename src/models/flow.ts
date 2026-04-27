@@ -33,6 +33,10 @@ export interface EdgeFlow {
 // Shape of the `data` object attached to RateEdge nodes in React Flow.
 export interface RateEdgeData extends EdgeFlow {
   itemId: string;
+  // Persisted user offset for the rate label (and routing waypoint).
+  // Mirrors GraphEdge.labelOffset; stored separately so RateEdge can read it
+  // without hitting the graph store.
+  labelOffset?: { x: number; y: number };
 }
 
 export interface HandleFlow {

@@ -198,6 +198,7 @@ function graphToFlow(graph: Graph, resolver: SubgraphResolver): { nodes: Node[];
         satisfaction: flow?.satisfaction ?? 1,
         sourceUtilization: flow?.sourceUtilization ?? 0,
         itemId: e.itemId,
+        labelOffset: e.labelOffset,
       },
     };
   });
