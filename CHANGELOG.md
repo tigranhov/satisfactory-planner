@@ -6,6 +6,18 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-04-28
+
+### Added
+- **Calculator utility.** New "Calculator" button in the top bar opens
+  a session-scoped tool for working out raw-material totals: enter a
+  desired quantity of any item, and a recipe breakdown tree shows how
+  many of each ingredient you need at every level. Per-item recipe
+  picker lets you swap to alternates or "Treat as raw" to stop
+  recursion at a particular item. Right column aggregates raw inputs
+  and any byproducts. Targets, recipe choices, and tree expansion
+  persist while the modal is reopened during the session.
+
 ## [0.11.0] - 2026-04-27
 
 ### Added
@@ -264,7 +276,8 @@ Initial release.
 - GitHub Releases auto-update via `electron-updater`, surfacing a
   "Restart to update" chip when a new installer has been downloaded.
 
-[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/tigranhov/satisfactory-planner/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/tigranhov/satisfactory-planner/compare/v0.8.0...v0.9.0
