@@ -4,7 +4,7 @@ import { handleIdForIngredient, handleIdForProduct, itemsPerMinute } from '@/mod
 import { useGraphStore } from '@/store/graphStore';
 import { commitHistory } from '@/store/historyStore';
 import { newEdgeId } from './ids';
-import { computeClockSplit } from './autoFill';
+import { discretizeRate } from './autoFill';
 import type { OptimizerScope } from './optimizerScope';
 import type { RecipeDiff } from './optimizerDiff';
 
@@ -32,15 +32,6 @@ interface NodeAction {
   clockSpeed: number;
 }
 
-// LP rate ("machines at 100%") → discrete count + clock via the shared
-// auto-fill splitter. Uniform strategy collapses the result to a single
-// bucket — one node carries the whole rate, count rounded up.
-function discretize(rate: number): { count: number; clockSpeed: number } {
-  if (rate <= 0) return { count: 0, clockSpeed: 1 };
-  const split = computeClockSplit(rate, 1, 'uniform')[0];
-  return split ?? { count: 1, clockSpeed: 1 };
-}
-
 function buildNodeActions(
   scope: OptimizerScope,
   diff: RecipeDiff,
@@ -51,7 +42,7 @@ function buildNodeActions(
     if (swap.kind !== 'swap') continue;
     const entry = entryByRecipe.get(swap.from.id);
     if (!entry) continue;
-    const { count, clockSpeed } = discretize(swap.after);
+    const { count, clockSpeed } = discretizeRate(swap.after);
     actions.set(entry.nodeId, {
       oldRecipeId: swap.from.id,
       newRecipeId: swap.to.id,
@@ -63,7 +54,7 @@ function buildNodeActions(
     if (rc.kind !== 'rateChanged') continue;
     const entry = entryByRecipe.get(rc.recipe.id);
     if (!entry) continue;
-    const { count, clockSpeed } = discretize(rc.after);
+    const { count, clockSpeed } = discretizeRate(rc.after);
     actions.set(entry.nodeId, {
       oldRecipeId: rc.recipe.id,
       newRecipeId: rc.recipe.id,

@@ -84,6 +84,15 @@ export function computeClockSplit(
   ];
 }
 
+// LP rate ("machines at 100%") → discrete count + clockSpeed via the shared
+// uniform splitter. One bucket — the whole rate carried by `count` machines
+// running at the same clock. Shared between optimizerApply and yieldApply.
+export function discretizeRate(rate: number): { count: number; clockSpeed: number } {
+  if (rate <= 0) return { count: 0, clockSpeed: 1 };
+  const split = computeClockSplit(rate, 1, 'uniform')[0];
+  return split ?? { count: 1, clockSpeed: 1 };
+}
+
 // True when every recipe producing this item is an extraction recipe, or when
 // none exist. Raw inputs need a miner the app can't parameterise safely, so
 // auto-fill skips them.
